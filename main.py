@@ -9,6 +9,8 @@ import telebot
 from queue import Queue
 from hashlib import md5
 import pytz
+import sqlite3
+from sqlite3 import Error
 
 # Настройка логирования
 logging.basicConfig(
@@ -16,6 +18,202 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+class Database:
+    """Класс для работы с базой данных SQLite"""
+    def __init__(self, db_file="messages.db"):
+        self.db_file = db_file
+        self.conn = None
+        self.lock = Lock()
+        self._initialize_db()
+
+    def _initialize_db(self):
+        """Инициализация базы данных и создание таблиц"""
+        try:
+            self.conn = sqlite3.connect(self.db_file, check_same_thread=False)
+            cursor = self.conn.cursor()
+            
+            # Таблица для сообщений
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    message_hash TEXT UNIQUE NOT NULL,
+                    message_text TEXT NOT NULL,
+                    channel_id TEXT NOT NULL,
+                    post_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    timestamp REAL NOT NULL,
+                    is_processed INTEGER DEFAULT 0,
+                    is_responded INTEGER DEFAULT 0,
+                    response_text TEXT,
+                    response_time REAL,
+                    responder_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Таблица для пользователей
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT UNIQUE NOT NULL,
+                    username TEXT,
+                    first_name TEXT,
+                    last_name TEXT,
+                    position TEXT,
+                    email TEXT,
+                    last_seen TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Таблица для задач
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    message_id INTEGER NOT NULL,
+                    assigned_to TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    taken_at TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    FOREIGN KEY (message_id) REFERENCES messages (id)
+                )
+            """)
+            
+            self.conn.commit()
+        except Error as e:
+            logger.error(f"Database initialization error: {str(e)}")
+            raise
+
+    def add_message(self, message_hash: str, message_text: str, channel_id: str, 
+                   post_id: str, user_id: str, timestamp: float):
+        """Добавляет сообщение в базу данных"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    INSERT OR IGNORE INTO messages 
+                    (message_hash, message_text, channel_id, post_id, user_id, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (message_hash, message_text, channel_id, post_id, user_id, timestamp))
+                self.conn.commit()
+                return cursor.lastrowid
+            except Error as e:
+                logger.error(f"Error adding message: {str(e)}")
+                return None
+
+    def get_message_by_hash(self, message_hash: str):
+        """Получает сообщение по хешу"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM messages WHERE message_hash = ?
+                """, (message_hash,))
+                return cursor.fetchone()
+            except Error as e:
+                logger.error(f"Error getting message: {str(e)}")
+                return None
+
+    def update_message_response(self, message_hash: str, response_text: str, 
+                              responder_id: str, response_time: float):
+        """Обновляет информацию об ответе на сообщение"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    UPDATE messages 
+                    SET is_responded = 1, response_text = ?, 
+                        responder_id = ?, response_time = ?
+                    WHERE message_hash = ?
+                """, (response_text, responder_id, response_time, message_hash))
+                self.conn.commit()
+                return cursor.rowcount > 0
+            except Error as e:
+                logger.error(f"Error updating message response: {str(e)}")
+                return False
+
+    def add_or_update_user(self, user_id: str, username: str = None, 
+                          first_name: str = None, last_name: str = None, 
+                          position: str = None, email: str = None):
+        """Добавляет или обновляет информацию о пользователе"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    INSERT INTO users 
+                    (user_id, username, first_name, last_name, position, email, last_seen)
+                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id) DO UPDATE SET
+                        username = COALESCE(excluded.username, username),
+                        first_name = COALESCE(excluded.first_name, first_name),
+                        last_name = COALESCE(excluded.last_name, last_name),
+                        position = COALESCE(excluded.position, position),
+                        email = COALESCE(excluded.email, email),
+                        last_seen = CURRENT_TIMESTAMP
+                """, (user_id, username, first_name, last_name, position, email))
+                self.conn.commit()
+                return True
+            except Error as e:
+                logger.error(f"Error adding/updating user: {str(e)}")
+                return False
+
+    def get_user_info(self, user_id: str):
+        """Получает информацию о пользователе"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM users WHERE user_id = ?
+                """, (user_id,))
+                return cursor.fetchone()
+            except Error as e:
+                logger.error(f"Error getting user info: {str(e)}")
+                return None
+
+    def create_task(self, message_id: int, assigned_to: str):
+        """Создает новую задачу"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    INSERT INTO tasks 
+                    (message_id, assigned_to, status, taken_at)
+                    VALUES (?, ?, 'pending', CURRENT_TIMESTAMP)
+                """, (message_id, assigned_to))
+                self.conn.commit()
+                return cursor.lastrowid
+            except Error as e:
+                logger.error(f"Error creating task: {str(e)}")
+                return None
+
+    def update_task_status(self, task_id: int, status: str):
+        """Обновляет статус задачи"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                if status == 'completed':
+                    cursor.execute("""
+                        UPDATE tasks 
+                        SET status = ?, completed_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    """, (status, task_id))
+                else:
+                    cursor.execute("""
+                        UPDATE tasks 
+                        SET status = ?
+                        WHERE id = ?
+                    """, (status, task_id))
+                self.conn.commit()
+                return cursor.rowcount > 0
+            except Error as e:
+                logger.error(f"Error updating task status: {str(e)}")
+                return False
+
+    def close(self):
+        """Закрывает соединение с базой данных"""
+        if self.conn:
+            self.conn.close()
 
 class Config:
     """Класс для хранения конфигурации"""
@@ -50,8 +248,9 @@ class Config:
 
 class MessageProcessor:
     """Обработчик сообщений с расширенной функциональностью"""
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, db: Database):
         self.config = config
+        self.db = db
         self.telegram_bot = telebot.TeleBot(config.telegram_bot_token)
         self.message_queue = Queue(maxsize=100)
         self.processed_messages = set()
@@ -72,12 +271,77 @@ class MessageProcessor:
                     f"Ответ от внедренца: {message.text}",
                     original_msg['post_id']
                 )
+                
+                # Сохраняем ответ в базу данных
+                self.db.update_message_response(
+                    original_msg['message_hash'],
+                    message.text,
+                    str(message.from_user.id),
+                    time.time()
+                )
+                
                 self.telegram_bot.send_message(
                     message.chat.id,
                     "Ваш ответ отправлен в Mattermost!",
                     reply_to_message_id=message.message_id
                 )
-    
+
+        @self.telegram_bot.callback_query_handler(func=lambda call: True)
+        def handle_callback_query(call):
+            message_data = self.pending_responses.get(call.message.message_id)
+            
+            if message_data and call.data == "take_work":
+                user_id = call.from_user.id
+                
+                # Проверяем, кто нажал кнопку
+                if message_data['user_id'] == user_id:
+                    # Переключаем состояние is_actual
+                    message_data['is_actual'] = not message_data['is_actual']
+                    
+                    # Обновляем текст кнопки
+                    if message_data['is_actual']:
+                        button_text = "Задача взята в работу"
+                        message_text = f"Задача взята в работу пользователем: {call.from_user.first_name} {call.from_user.last_name}"
+                        
+                        # Создаем задачу в базе данных
+                        db_message = self.db.get_message_by_hash(message_data['message_hash'])
+                        if db_message:
+                            self.db.create_task(db_message[0], str(user_id))
+                    else:
+                        button_text = "Взять в работу"
+                        message_text = "Задача возвращена в состояние доступна для работы."
+                    
+                    # Обновляем сообщение с новой кнопкой
+                    mm_link = self._format_mattermost_link(message_data['post_id'])
+                    user_info = self._get_user_info(message_data['user_id'])
+                    username = user_info.get('username', '') if user_info else ''
+                    
+                    markup = telebot.types.InlineKeyboardMarkup()
+                    markup.add(telebot.types.InlineKeyboardButton(
+                        text="Перейти к сообщению в Mattermost",
+                        url=mm_link
+                    ))
+                    markup.add(telebot.types.InlineKeyboardButton(
+                        text="Перейти к сообщению в лс Mattermost",
+                        url=f"https://chat.skbkontur.ru/kontur/messages/@{username}"
+                    ))
+                    markup.add(telebot.types.InlineKeyboardButton(
+                        text=button_text,
+                        callback_data="take_work"
+                    ))
+                    
+                    # Обновляем сообщение
+                    self.telegram_bot.edit_message_text(
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        text=message_text,
+                        parse_mode='HTML',
+                        reply_markup=markup
+                    )
+                    
+                    # Подтверждаем, что запрос обработан
+                    self.telegram_bot.answer_callback_query(call.id)
+
     def _get_message_hash(self, message: str, channel_id: str, post_id: str) -> str:
         """Генерирует уникальный хеш для сообщения"""
         return md5(f"{message}-{channel_id}-{post_id}".encode()).hexdigest()
@@ -110,6 +374,14 @@ class MessageProcessor:
         """Обрабатывает входящее сообщение"""
         message_hash = self._get_message_hash(message, channel_id, post_id)
         
+        # Проверяем, было ли сообщение уже обработано
+        db_message = self.db.get_message_by_hash(message_hash)
+        if db_message and db_message[7]:  # is_processed
+            return
+        
+        # Добавляем сообщение в базу данных
+        message_id = self.db.add_message(message_hash, message, channel_id, post_id, user_id, time.time())
+        
         with self.lock:
             if message_hash in self.processed_messages:
                 return
@@ -128,11 +400,24 @@ class MessageProcessor:
             'channel_id': channel_id,
             'post_id': post_id,
             'user_id': user_id,
+            'message_hash': message_hash,
             'timestamp': time.time()
         })
     
     def _get_user_info(self, user_id: str) -> dict:
-        """Получает информацию о пользователе из Mattermost"""
+        """Получает информацию о пользователе из Mattermost и сохраняет в БД"""
+        # Сначала проверяем локальную базу данных
+        db_user = self.db.get_user_info(user_id)
+        if db_user:
+            return {
+                'username': db_user[2],
+                'first_name': db_user[3],
+                'last_name': db_user[4],
+                'position': db_user[5],
+                'email': db_user[6]
+            }
+        
+        # Если нет в базе, запрашиваем из Mattermost
         headers = {
             'Authorization': f'Bearer {self.config.mattermost_bearer_token}',
             'Content-Type': 'application/json'
@@ -144,7 +429,17 @@ class MessageProcessor:
                 timeout=5
             )
             if response.status_code == 200:
-                return response.json()
+                user_data = response.json()
+                # Сохраняем пользователя в базу данных
+                self.db.add_or_update_user(
+                    user_id=user_id,
+                    username=user_data.get('username'),
+                    first_name=user_data.get('first_name'),
+                    last_name=user_data.get('last_name'),
+                    position=user_data.get('position'),
+                    email=user_data.get('email')
+                )
+                return user_data
         except Exception as e:
             logger.error(f"Ошибка получения информации о пользователе: {str(e)}")
         
@@ -186,32 +481,42 @@ class MessageProcessor:
         return f"{self.config.mattermost_server_url}/kontur/pl/{clean_post_id}"
 
     def _send_to_telegram(self, message_data: dict):
-        """Отправляет уведомление в Telegram с корректными ссылками"""
         # Пропускаем сообщения от бота
         if message_data['user_id'] == self.config.bot_user_id:
             return
 
         # Получаем информацию об отправителе
         user_info = self._get_user_info(message_data['user_id'])
-        display_name = self._get_display_name(user_info)
-        
+        username = user_info.get('username', '')
+        first_name = user_info.get('first_name', 'Неизвестный')
+        last_name = user_info.get('last_name', 'Неизвестный')
+        position = user_info.get('position', '')
+        email = user_info.get('email', '')
+
         # Форматируем ссылку
         mm_link = self._format_mattermost_link(message_data['post_id'])
         
         # Создаем текст сообщения
         message_text = (
-            f"🚨 Новое сообщение во внерабочее время!\n\n"
-            f"От: <b>{display_name}</b>\n"
-            f"Сообщение: {message_data['message']}\n\n"
-            f"<a href='{mm_link}'>Перейти к сообщению в Mattermost</a>"
+            f"🚨 Новое сообщение! 🚨\n\n"
+            f"От: {position}:<a href='https://staff.skbkontur.ru/profile/{username}'><b> {first_name} {last_name}</b></a>\n\n"
+            f"Сообщение: {message_data['message']}\n"
         )
 
         try:
             # Создаем клавиатуру с кнопкой
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(telebot.types.InlineKeyboardButton(
-                text="Ответить в Mattermost",
+                text="Перейти к сообщению в Mattermost",
                 url=mm_link
+            ))
+            markup.add(telebot.types.InlineKeyboardButton(
+                text="Перейти к сообщению в лс Mattermost",
+                url=f"https://chat.skbkontur.ru/kontur/messages/@{username}"
+            ))
+            markup.add(telebot.types.InlineKeyboardButton(
+                text="Взять в работу",
+                callback_data="take_work"
             ))
             
             # Отправляем сообщение
@@ -223,22 +528,15 @@ class MessageProcessor:
                 disable_web_page_preview=True
             )
             
-            self.pending_responses[sent_msg.message_id] = message_data
+            self.pending_responses[sent_msg.message_id] = {
+                **message_data,
+                'is_actual': True  # Изначально задача активна
+            }
             Thread(target=self._check_response, args=(message_data,)).start()
             
         except Exception as e:
             logger.error(f"Ошибка отправки в Telegram: {str(e)}")
 
-    def _get_display_name(self, user_info: dict) -> str:
-        """Форматирует отображаемое имя пользователя"""
-        username = user_info.get('username', 'Неизвестный')
-        first_name = user_info.get('first_name', '')
-        last_name = user_info.get('last_name', '')
-        
-        if first_name or last_name:
-            return f"{first_name} {last_name}".strip()
-        return username
-    
     def _check_response(self, message_data: dict):
         """Проверяет, был ли ответ на сообщение"""
         time.sleep(3600)  # Ждем 1 час
@@ -246,6 +544,11 @@ class MessageProcessor:
         with self.lock:
             if message_data['post_id'] not in [msg['post_id'] for msg in self.pending_responses.values()]:
                 return
+        
+        # Проверяем в базе данных, был ли ответ
+        db_message = self.db.get_message_by_hash(message_data['message_hash'])
+        if db_message and db_message[8]:  # is_responded
+            return
         
         # Если ответа не было, уведомляем руководителя
         self._notify_manager(message_data)
@@ -363,7 +666,8 @@ def main():
     
     try:
         config = Config()
-        processor = MessageProcessor(config)
+        db = Database()
+        processor = MessageProcessor(config, db)
         
         # Запускаем обработчик сообщений
         Thread(target=processor.start_processing, args=(stop_event,), daemon=True).start()
@@ -389,6 +693,9 @@ def main():
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}")
         stop_event.set()
+    finally:
+        if 'db' in locals():
+            db.close()
 
 if __name__ == '__main__':
     main()
