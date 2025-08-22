@@ -5,6 +5,7 @@ from datetime import datetime
 import telebot
 from queue import Queue
 from hashlib import md5
+import re
 
 from back.database import *
 
@@ -50,11 +51,117 @@ class MessageProcessor:
                     reply_to_message_id=message.message_id
                 )
 
+                return
+            
+            elif message.text.startswith('/'):
+                if message.text=='/start':
+                    markup = telebot.types.InlineKeyboardMarkup()
+                    markup.add(telebot.types.InlineKeyboardButton(
+                            text="Познакомиться",
+                            callback_data='introduce'
+                        ))
+                        
+                    self.telegram_bot.send_message(
+                        message.chat.id,
+                        "Добро пожаловать! Я бот Валера. \nЯ помогу вам держать контакт между телеграмом и маттермостом.",
+                        parse_mode='HTML',
+                        reply_markup=markup,
+                        disable_web_page_preview=True
+                    )
+            # Обработчик текстовых сообщений
+            elif '@skbkontur.ru' in message.text and message.reply_to_message.from_user.username == 'taxmon_python_test_bot':
+                    def is_valid_email(email: str) -> bool:
+                        """Проверяет валидность email адреса"""
+                        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                        return re.match(pattern, email) is not None
+                    email = message.text.strip()
+                    
+                    # Проверяем валидность email
+                    if not is_valid_email(email):
+                        self.telegram_bot.send_message(message.chat.id, "❌ Пожалуйста, введите корректный email адрес(@skbkontur.ru).")
+                        return
+                    
+                    user_id = message.from_user.id
+                    username = message.from_user.username
+                    first_name = message.from_user.first_name
+                    last_name = message.from_user.last_name
+                    
+                    # Проверяем, есть ли уже такой email в базе
+                    existing_user = self.db.get_user_by_email(email)
+                    
+                    if existing_user:
+                        # Email уже существует - обновляем информацию о пользователе
+                        existing_user_id, existing_username, existing_first_name, existing_last_name, existing_position = existing_user
+                        
+                        if self.db.add_or_update_user(
+                            user_id = existing_user_id,
+                            username = existing_username,
+                            first_name = existing_first_name,
+                            last_name = existing_last_name,
+                            position=existing_position,
+                            email = email,
+                            id_tg = user_id,
+                            username_tg = username
+                        ):
+                            self.telegram_bot.send_message(
+                                message.chat.id,
+                                f"✅ Информация обновлена!\n"
+                                f"Email: {email}\n"
+                                f"Теперь вы связаны с этим аккаунтом."
+                            )
+                        else:
+                            self.telegram_bot.send_message(message.chat.id, "❌ Ошибка при обновлении информации.")
+                    else:
+                        # Новый email - создаем запись
+                        if self.db.add_or_update_user(
+                            user_id=user_id,
+                            username=username,
+                            first_name=first_name,
+                            last_name=last_name,
+                            email=email
+                        ):
+                            self.telegram_bot.send_message(
+                                message.chat.id,
+                                f"✅ Отлично! Ваш email сохранен: {email}\n"
+                                f"Теперь вы можете получать уведомления из Mattermost."
+                            )
+                        else:
+                            self.telegram_bot.send_message(message.chat.id, "❌ Ошибка при сохранении email.")
+                            
+            elif message.text=='/help':
+                help_text = (
+                    "Доступные команды:\n"
+                    "/start - Начать взаимодействие с ботом\n"
+                    "/help - Получить список доступных команд\n"
+                    "/info - Получить информацию о боте"
+                )
+                self.telegram_bot.reply_to(message, help_text)
+                return
+            
+            elif message.text=='/info':
+                info_text = (
+                    "🌟 **Добро пожаловать в мир оперативного (налогового) мониторинга!** 🌟\n\n"
+                    "Этот бот создан для того, чтобы вы могли быстро реагировать на сообщения в Mattermost, даже вне рабочего времени.\n\n"
+                    "🔔 **Что вас ждет?**\n"
+                    "- Вне рабочего времени по Екатеринбургу вы будете получать уведомления в чат из Mattermost.\n"
+                    "- Вы можете взять задачи в работу, ответить на них, перейти по ссылкам для подробностей или просто проигнорировать.\n\n"
+                    "💬 **Как это работает?**\n"
+                    "- Если вы отвечаете на сообщения бота, ваше сообщение автоматически отправляется в тред Mattermost.\n"
+                    "- Если вы берете задачу в работу, она закрепляется за вами. Если никто не взял её, сообщение будет отправлено менеджменту проекта.\n\n"
+                    "🔗 **Не забывайте:**\n"
+                    "Чтобы узнать подробности о сообщении, просто пройдите по ссылкам или нажмите на кнопки, предоставленные ботом.\n\n"
+                    "🤖 **Давайте сделаем вашу работу более эффективной!**"
+                )
+                self.telegram_bot.reply_to(message, info_text, parse_mode='Markdown')
+                return
+
+
         @self.telegram_bot.callback_query_handler(func=lambda call: True)
         def handle_callback_query(call):
             message_data = self.pending_responses.get(call.message.message_id)
-            
-            if message_data and call.data == "take_work":
+            if call.data == "introduce":
+                self.telegram_bot.send_message(call.message.chat.id, "📧 Пожалуйста, введите вашу корпоративную почту:")
+            elif message_data and call.data == "take_work":
                 user_id = call.from_user.id
                 
                 # Переключаем состояние is_actual
@@ -123,7 +230,6 @@ class MessageProcessor:
     def _get_implementers(self) -> list:
         """Возвращает список внедренцев для текущего времени"""
         now_ekb = datetime.now(self.config.ekb_tz).hour
-        now_msk = datetime.now(self.config.msk_tz).hour
         
         if self.config.non_working_hours['ekb']['start'] <= now_ekb < self.config.non_working_hours['ekb']['end']:
             return self.config.implementers['ekb']
@@ -148,11 +254,6 @@ class MessageProcessor:
             self.processed_messages.add(message_hash)
         
         if self._is_non_working_time():
-            self._send_to_mattermost(
-                channel_id,
-                "Спасибо за сообщение! Мы обработаем его в рабочее время (с 8 до 18).",
-                post_id
-            )
             return
         
         self.message_queue.put({

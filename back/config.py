@@ -24,8 +24,8 @@ class Config:
         
         # Настройки времени
         self.non_working_hours = {
-            'ekb': {'start': 6, 'end': 10},  # 6-8 утра ЕКБ
-            'msk': {'start': 6, 'end': 10}   # 8-10 утра МСК
+            'ekb': {'start': 9  , 'end': 10},  # 6-8 утра ЕКБ
+            'msk': {'start': 9, 'end': 10}   # 8-10 утра МСК
         }
         
         # Внедренцы

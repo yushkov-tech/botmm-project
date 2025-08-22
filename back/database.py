@@ -47,6 +47,9 @@ class Database:
                     last_name TEXT,
                     position TEXT,
                     email TEXT,
+                    id_tg TEXT,
+                    username_tg TEXT,
+                    time_zone TEXT,
                     last_seen TIMESTAMP,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -119,24 +122,27 @@ class Database:
                 return False
 
     def add_or_update_user(self, user_id: str, username: str = None, 
-                          first_name: str = None, last_name: str = None, 
-                          position: str = None, email: str = None):
+                            first_name: str = None, last_name: str = None, 
+                            position: str = None, email: str = None, id_tg: str = None, username_tg: str = None):
         """Добавляет или обновляет информацию о пользователе"""
         with self.lock:
             try:
                 cursor = self.conn.cursor()
                 cursor.execute("""
                     INSERT INTO users 
-                    (user_id, username, first_name, last_name, position, email, last_seen)
-                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    (user_id, username, first_name, last_name, position, email, id_tg, username_tg, last_seen)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                     ON CONFLICT(user_id) DO UPDATE SET
+                        user_id = COALESCE(excluded.user_id, user_id),
                         username = COALESCE(excluded.username, username),
                         first_name = COALESCE(excluded.first_name, first_name),
                         last_name = COALESCE(excluded.last_name, last_name),
                         position = COALESCE(excluded.position, position),
                         email = COALESCE(excluded.email, email),
+                        id_tg = COALESCE(excluded.id_tg, id_tg),
+                        username_tg = COALESCE(excluded.username_tg, username_tg),
                         last_seen = CURRENT_TIMESTAMP
-                """, (user_id, username, first_name, last_name, position, email))
+                """, (user_id, username, first_name, last_name, position, email, id_tg, username_tg))
                 self.conn.commit()
                 return True
             except Error as e:
@@ -194,6 +200,16 @@ class Database:
             except Error as e:
                 LOGGER.error(f"Error updating task status: {str(e)}")
                 return False
+    
+    def get_user_by_email(self, email: str):
+        """Проверяет, существует ли пользователь с таким email"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT user_id, username, first_name, last_name, position FROM users WHERE email = ?", (email,))
+            return cursor.fetchone()
+        except Error as e:
+            LOGGER.error(f"Error getting user by email: {str(e)}")
+            return None
 
     def close(self):
         """Закрывает соединение с базой данных"""
