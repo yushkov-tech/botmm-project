@@ -1,6 +1,7 @@
 from threading import Lock
 import sqlite3
 from sqlite3 import Error
+import random
 
 from back.logger import *
 
@@ -160,6 +161,23 @@ class Database:
                 return cursor.fetchone()
             except Error as e:
                 LOGGER.error(f"Error getting user info: {str(e)}")
+                return None
+            
+    def get_random_user_by_position(self, position: str):
+        """Получает случайного пользователя с указанной позицией"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM users WHERE position = ?
+                """, (position,))
+                users = cursor.fetchall()
+                if users:
+                    return random.choice(users)  # Возвращаем случайного пользователя
+                else:
+                    return None  # Если нет пользователей с такой позицией
+            except Error as e:
+                LOGGER.error(f"Error getting random user by position: {str(e)}")
                 return None
 
     def create_task(self, message_id: int, assigned_to: str):
