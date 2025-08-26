@@ -124,15 +124,15 @@ class Database:
 
     def add_or_update_user(self, user_id: str, username: str = None, 
                             first_name: str = None, last_name: str = None, 
-                            position: str = None, email: str = None, id_tg: str = None, username_tg: str = None):
+                            position: str = None, email: str = None, id_tg: str = None, username_tg: str = None, time_zone: str = None):
         """Добавляет или обновляет информацию о пользователе"""
         with self.lock:
             try:
                 cursor = self.conn.cursor()
                 cursor.execute("""
                     INSERT INTO users 
-                    (user_id, username, first_name, last_name, position, email, id_tg, username_tg, last_seen)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    (user_id, username, first_name, last_name, position, email, id_tg, username_tg, time_zone, last_seen)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                     ON CONFLICT(user_id) DO UPDATE SET
                         user_id = COALESCE(excluded.user_id, user_id),
                         username = COALESCE(excluded.username, username),
@@ -142,8 +142,9 @@ class Database:
                         email = COALESCE(excluded.email, email),
                         id_tg = COALESCE(excluded.id_tg, id_tg),
                         username_tg = COALESCE(excluded.username_tg, username_tg),
+                        time_zone = COALESCE(excluded.time_zone, time_zone),
                         last_seen = CURRENT_TIMESTAMP
-                """, (user_id, username, first_name, last_name, position, email, id_tg, username_tg))
+                """, (user_id, username, first_name, last_name, position, email, id_tg, username_tg, time_zone))
                 self.conn.commit()
                 return True
             except Error as e:
@@ -162,7 +163,48 @@ class Database:
             except Error as e:
                 LOGGER.error(f"Error getting user info: {str(e)}")
                 return None
+    
+    def get_user_info_tg(self, user_id: str):
+        """Получает информацию о пользователе"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM users WHERE id_tg = ?
+                """, (user_id,))
+                return cursor.fetchone()
+            except Error as e:
+                LOGGER.error(f"Error getting user info: {str(e)}")
+                return None
             
+    def get_user_email(self, user_email: str):
+        """Получает информацию о пользователе"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM users WHERE email = ?
+                """, (user_email,))
+                return cursor.fetchone()
+            except Error as e:
+                LOGGER.error(f"Error getting user info: {str(e)}")
+                return None
+
+    def get_users_with_time_zone(self):
+        """Получает всех пользователей с их часовыми поясами из базы данных."""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    SELECT id_tg, username_tg, position, time_zone
+                    FROM users
+                """)
+                users = cursor.fetchall()
+                return users  # Возвращаем список кортежей с данными пользователей
+            except Error as e:
+                LOGGER.error(f"Error fetching users with time zone: {str(e)}")
+                return []
+
     def get_random_user_by_position(self, position: str):
         """Получает случайного пользователя с указанной позицией"""
         with self.lock:
@@ -223,7 +265,7 @@ class Database:
         """Проверяет, существует ли пользователь с таким email"""
         try:
             cursor = self.conn.cursor()
-            cursor.execute("SELECT user_id, username, first_name, last_name, position FROM users WHERE email = ?", (email,))
+            cursor.execute("SELECT user_id, username, first_name, last_name, position, time_zone FROM users WHERE email = ?", (email,))
             return cursor.fetchone()
         except Error as e:
             LOGGER.error(f"Error getting user by email: {str(e)}")

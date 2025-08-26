@@ -53,7 +53,7 @@ class MessageProcessor:
                 return
             
             elif message.text.startswith('/'):
-                if message.text=='/start':
+                if message.text=='/start' or message.text=='/start@taxmon_python_test_bot':
                     markup = telebot.types.InlineKeyboardMarkup()
                     markup.add(telebot.types.InlineKeyboardButton(
                             text="Познакомиться",
@@ -68,17 +68,18 @@ class MessageProcessor:
                         disable_web_page_preview=True
                     )
 
-                elif message.text=='/help':
+                elif message.text=='/help' or message.text=='/help@taxmon_python_test_bot':
                     help_text = (
                         "Доступные команды:\n"
                         "/start - Начать взаимодействие с ботом\n"
                         "/help - Получить список доступных команд\n"
-                        "/info - Получить информацию о боте"
+                        "/info - Получить информацию о боте\n"
+                        "/ярмарка - Получить информацию о боте\n"
                     )
                     self.telegram_bot.reply_to(message, help_text)
                     return
 
-                elif message.text == '/ЯРМАРКА':
+                elif message.text == '/ярмарка' or message.text=='/ярмарка@taxmon_python_test_bot':
                     random_user = self._get_random_user_by_position('Специалист по интеграции')
                     if random_user:
                         user_info = f"Случайный специалист по внедрению:\n" \
@@ -93,7 +94,7 @@ class MessageProcessor:
                     else:
                         self.telegram_bot.send_message(message.chat.id, "❌ Нет специалистов по внедрению.")
                 
-                elif message.text=='/info':
+                elif message.text=='/info' or message.text=='/info@taxmon_python_test_bot':
                     info_text = (
                         "🌟 **Добро пожаловать в мир оперативного (налогового) мониторинга!** 🌟\n\n"
                         "Этот бот создан для того, чтобы вы могли быстро реагировать на сообщения в Mattermost, даже вне рабочего времени.\n\n"
@@ -111,15 +112,16 @@ class MessageProcessor:
                     return
 
             # Обработчик текстовых сообщений
-            elif '@skbkontur.ru' in message.text and message.reply_to_message.from_user.username == 'taxmon_python_test_bot':
-                    def is_valid_email(email: str) -> bool:
+            elif message.reply_to_message is not None:
+                if message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text=='📧 Пожалуйста, ответьте на это сообщение вашей корпоративную почтой:':
+                    def _is_valid_email(email: str) -> bool:
                         """Проверяет валидность email адреса"""
-                        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                        pattern = r'^[a-zA-Z0-9._%+-]+@skbkontur.ru$'
                         return re.match(pattern, email) is not None
                     email = message.text.strip()
                     
                     # Проверяем валидность email
-                    if not is_valid_email(email):
+                    if not _is_valid_email(email):
                         self.telegram_bot.send_message(message.chat.id, "❌ Пожалуйста, введите корректный email адрес(@skbkontur.ru).")
                         return
                     
@@ -133,7 +135,7 @@ class MessageProcessor:
                     
                     if existing_user:
                         # Email уже существует - обновляем информацию о пользователе
-                        existing_user_id, existing_username, existing_first_name, existing_last_name, existing_position = existing_user
+                        existing_user_id, existing_username, existing_first_name, existing_last_name, existing_position, time_zone = existing_user
                         
                         if self.db.add_or_update_user(
                             user_id = existing_user_id,
@@ -143,7 +145,8 @@ class MessageProcessor:
                             position=existing_position,
                             email = email,
                             id_tg = user_id,
-                            username_tg = username
+                            username_tg = username,
+                            time_zone = time_zone
                         ):
                             self.telegram_bot.send_message(
                                 message.chat.id,
@@ -151,6 +154,8 @@ class MessageProcessor:
                                 f"Email: {email}\n"
                                 f"Теперь вы связаны с этим аккаунтом."
                             )
+                            if time_zone == None:
+                                self.telegram_bot.send_message(message.chat.id, '🌏 Пожалуйста, ответьте на это сообщение вашим часовым поясом (Мск/Екб)')
                         else:
                             self.telegram_bot.send_message(message.chat.id, "❌ Ошибка при обновлении информации.")
                     else:
@@ -165,17 +170,43 @@ class MessageProcessor:
                             self.telegram_bot.send_message(
                                 message.chat.id,
                                 f"✅ Отлично! Ваш email сохранен: {email}\n"
-                                f"Теперь вы можете получать уведомления из Mattermost."
                             )
                         else:
                             self.telegram_bot.send_message(message.chat.id, "❌ Ошибка при сохранении email.")
-
+                elif message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text=='🌏 Пожалуйста, ответьте на это сообщение вашим часовым поясом (Мск/Екб)':
+                    time_zone = message.text.strip()
+                    
+                    user_id = message.from_user.id
+                    
+                    # Проверяем, есть ли пользователь в базе
+                    existing_user = self.db.get_user_info_tg(user_id)
+                    
+                    if existing_user:
+                        if self.db.add_or_update_user(
+                            user_id = existing_user[1],
+                            username = existing_user[2],
+                            first_name = existing_user[3],
+                            last_name = existing_user[4],
+                            position = existing_user[5],
+                            email = existing_user[6],
+                            id_tg = existing_user[7],
+                            username_tg = existing_user[8],
+                            time_zone = time_zone
+                        ):
+                            self.telegram_bot.send_message(
+                                message.chat.id,
+                                f"✅ Ваш часовой пояс сохранен: {time_zone}\n"
+                            )
+                        else:
+                            self.telegram_bot.send_message(message.chat.id, "❌ Ошибка при обновлении часового пояса.")
+                    else:
+                        self.telegram_bot.send_message(message.chat.id, "❌ Пользователь не найден в базе данных.")                        
 
         @self.telegram_bot.callback_query_handler(func=lambda call: True)
         def handle_callback_query(call):
             message_data = self.pending_responses.get(call.message.message_id)
             if call.data == "introduce":
-                self.telegram_bot.send_message(call.message.chat.id, "📧 Пожалуйста, введите вашу корпоративную почту:")
+                self.telegram_bot.send_message(call.message.chat.id, "📧 Пожалуйста, ответьте на это сообщение вашей корпоративную почтой:")
             elif message_data and call.data == "take_work":
                 user_id = call.from_user.id
                 
@@ -216,7 +247,7 @@ class MessageProcessor:
                 self.telegram_bot.edit_message_text(
                     chat_id=call.message.chat.id,
                     message_id=call.message.message_id,
-                    text=call.message.text,
+                    text=call.message.html_text,
                     parse_mode='HTML',
                     reply_markup=markup
                 )
@@ -228,7 +259,7 @@ class MessageProcessor:
         """Генерирует уникальный хеш для сообщения"""
         return md5(f"{message}-{channel_id}-{post_id}".encode()).hexdigest()
     
-    def _is_non_working_time(self) -> bool:
+    def _is_working_time(self) -> bool:
         """Проверяет, находится ли текущее время в нерабочих часах"""
         now_ekb = datetime.now(self.config.ekb_tz)
         now_msk = datetime.now(self.config.msk_tz)
@@ -236,20 +267,11 @@ class MessageProcessor:
         ekb_hour = now_ekb.hour
         msk_hour = now_msk.hour
         
-        ekb_time = self.config.non_working_hours['ekb']
-        msk_time = self.config.non_working_hours['msk']
+        ekb_time = self.config.non_working_hours['екб']
+        msk_time = self.config.non_working_hours['мск']
         
-        return (ekb_time['start'] <= ekb_hour < ekb_time['end'] or 
+        return (ekb_time['start'] <= ekb_hour < ekb_time['end'] and 
                 msk_time['start'] <= msk_hour < msk_time['end'])
-    
-    def _get_implementers(self) -> list:
-        """Возвращает список внедренцев для текущего времени"""
-        now_ekb = datetime.now(self.config.ekb_tz).hour
-        
-        if self.config.non_working_hours['ekb']['start'] <= now_ekb < self.config.non_working_hours['ekb']['end']:
-            return self.config.implementers['ekb']
-        else:
-            return self.config.implementers['msk']
     
     def process_message(self, message: str, channel_id: str, post_id: str, user_id: str):
         """Обрабатывает входящее сообщение"""
@@ -268,7 +290,7 @@ class MessageProcessor:
                 return
             self.processed_messages.add(message_hash)
         
-        if self._is_non_working_time():
+        if self._is_working_time():
             return
         
         self.message_queue.put({
@@ -310,15 +332,32 @@ class MessageProcessor:
             )
             if response.status_code == 200:
                 user_data = response.json()
+                user_data_from_bd=self.db.get_user_email(user_data.get('email'))
+                if user_data_from_bd != None:
+                    # Email уже существует - обновляем информацию о пользователе
+                    email, user_id, username, time_zone = user_data_from_bd[5:8]
+                    
+                    self.db.add_or_update_user(
+                        user_id=user_data.get('id'),
+                        username=user_data.get('username'),
+                        first_name=user_data.get('first_name'),
+                        last_name=user_data.get('last_name'),
+                        position=user_data.get('position'),
+                        email = email,
+                        id_tg = user_id,
+                        username_tg = username,
+                        time_zone = time_zone
+                    )
+                else:
                 # Сохраняем пользователя в базу данных
-                self.db.add_or_update_user(
-                    user_id=user_id,
-                    username=user_data.get('username'),
-                    first_name=user_data.get('first_name'),
-                    last_name=user_data.get('last_name'),
-                    position=user_data.get('position'),
-                    email=user_data.get('email')
-                )
+                    self.db.add_or_update_user(
+                        user_id=user_id,
+                        username=user_data.get('username'),
+                        first_name=user_data.get('first_name'),
+                        last_name=user_data.get('last_name'),
+                        position=user_data.get('position'),
+                        email=user_data.get('email')
+                    )
                 return user_data
         except Exception as e:
             LOGGER.error(f"Ошибка получения информации о пользователе: {str(e)}")
@@ -378,12 +417,34 @@ class MessageProcessor:
         # Форматируем ссылку
         mm_link = self._format_mattermost_link(message_data['post_id'])
         
+        # Получаем текущее время в нужном часовом поясе
+        current_time = datetime.now(self.config.ekb_tz)
+        current_hour = current_time.hour
+
+        # Получаем всех пользователей с их часовыми поясами
+        users_in_time_zone = self.db.get_users_with_time_zone()
+
+        # Список пользователей, которые могут получать сообщения
+        working_usernames  = []
+        
+        for user in users_in_time_zone:
+            user_id, username_tg, position, time_zone = user
+            if user_id is not None and time_zone.lower() in self.config.non_working_hours:
+                working_hours = self.config.non_working_hours[time_zone.lower()]
+                if working_hours['start'] <= current_hour < working_hours['end']:
+                    working_usernames.append(username_tg)
+
         # Создаем текст сообщения
         message_text = (
             f"🚨 Новое сообщение! 🚨\n\n"
             f"От: {position}:<a href='https://staff.skbkontur.ru/profile/{username}'><b> {first_name} {last_name}</b></a>\n\n"
             f"Сообщение: {message_data['message']}\n"
         )
+        # Добавляем информацию о рабочих пользователях, если есть
+        if working_usernames:
+            message_text += "Внимание: "
+        for working in working_usernames:
+            message_text += '@' + working + ' '
 
         try:
             # Создаем клавиатуру с кнопкой

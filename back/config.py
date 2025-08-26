@@ -24,12 +24,6 @@ class Config:
         
         # Настройки времени
         self.non_working_hours = {
-            'ekb': {'start': 9  , 'end': 10},  # 6-8 утра ЕКБ
-            'msk': {'start': 9, 'end': 10}   # 8-10 утра МСК
-        }
-        
-        # Внедренцы
-        self.implementers = {
-            'ekb': ['user1_id', 'user2_id'],
-            'msk': ['user3_id', 'user4_id']
+            'екб': {'start': 6 , 'end': 20},
+            'мск': {'start': 6, 'end': 6}
         }

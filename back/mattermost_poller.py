@@ -45,9 +45,18 @@ class MattermostPoller:
         for post_id in messages.get('order', []):
             post = messages['posts'][post_id]
             
+            # Игнорируем сообщения от бота
             if post['user_id'] == self.config.bot_user_id:
                 continue
-                
+            
+            # Проверяем время создания сообщения
+            create_at = post.get('create_at', 0) / 1000  # Приводим к миллисекундам
+            message_time = datetime.fromtimestamp(create_at, timezone.utc)
+            # Игнорируем сообщения, отправленные до последнего времени обработки
+            if message_time <= self.last_post_time:
+                continue
+            
+            # Обрабатываем сообщение
             self.processor.process_message(
                 post['message'],
                 self.config.channel_id,
@@ -56,5 +65,4 @@ class MattermostPoller:
             )
             
             # Обновляем время последнего сообщения
-            create_at = post.get('create_at', 0) / 1000
-            self.last_post_time = datetime.fromtimestamp(create_at, timezone.utc)
+            self.last_post_time = message_time
