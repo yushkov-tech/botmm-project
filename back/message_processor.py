@@ -225,7 +225,7 @@ class MessageProcessor:
                 ))
                 markup.add(telebot.types.InlineKeyboardButton(
                     text="Перейти к сообщению в лс Mattermost",
-                    url=MM_DIRECT_MESSAGE_URL_TEMPLATE
+                    url=MM_DIRECT_MESSAGE_URL_TEMPLATE.format(username=username)
                 ))
                 markup.add(telebot.types.InlineKeyboardButton(
                     text=button_text,
@@ -426,7 +426,7 @@ class MessageProcessor:
                     working_usernames.append(username_tg)
 
         # Создаем текст сообщения
-        profile_url=STAFF_PROFILE_URL_TEMPLATE
+        profile_url=STAFF_PROFILE_URL_TEMPLATE.format(username=username)
         message=message_data['message']
         message_text = NEW_MESSAGE_TEMPLATE.format(
             position=position,
@@ -448,7 +448,7 @@ class MessageProcessor:
             ))
             markup.add(telebot.types.InlineKeyboardButton(
                 text=BUTTON_GO_TO_DM,
-                url=MM_DIRECT_MESSAGE_URL_TEMPLATE
+                url=MM_DIRECT_MESSAGE_URL_TEMPLATE.format(username=username)
             ))
             markup.add(telebot.types.InlineKeyboardButton(
                 text=BUTTON_TAKE_WORK,
@@ -504,7 +504,7 @@ class MessageProcessor:
         mm_link = self._format_mattermost_link(message_data['post_id'])
         
         # Создаем текст сообщения
-        profile_url=STAFF_PROFILE_URL_TEMPLATE
+        profile_url=STAFF_PROFILE_URL_TEMPLATE.format(username=username)
         message=message_data['message']
         message_text = NO_RESPONSE_NOTIFICATION.format(
             position=position,
@@ -522,7 +522,7 @@ class MessageProcessor:
             ))
             markup.add(telebot.types.InlineKeyboardButton(
                 text="Перейти к сообщению в лс Mattermost",
-                url=MM_DIRECT_MESSAGE_URL_TEMPLATE
+                url=MM_DIRECT_MESSAGE_URL_TEMPLATE.format(username=username)
             ))
             markup.add(telebot.types.InlineKeyboardButton(
                 text=BUTTON_TAKE_WORK,
