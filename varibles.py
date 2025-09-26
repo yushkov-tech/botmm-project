@@ -15,6 +15,8 @@ HTTP_CREATED = 201
 MAX_REMINDERS = 3  # Максимум 12 напоминаний (1.5 часа)
 REMINDER_TIME = 7
 
+WORK_TIME = {'start': 9, 'end': 18}
+
 
 # Ошибки базы данных
 DB_INIT_ERROR = "Database initialization error: {error}"
