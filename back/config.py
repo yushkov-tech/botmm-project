@@ -2,6 +2,8 @@ import envparse
 import pytz
 
 from back.database import *
+from massage_varibles import *
+from varibles import *
 
 class Config:
     """Класс для хранения конфигурации"""

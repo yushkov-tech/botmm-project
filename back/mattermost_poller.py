@@ -7,12 +7,15 @@ from back.database import *
 from back.config import *
 from back.message_processor import *
 
+from massage_varibles import *
+from varibles import *
+
 class MattermostPoller:
     """Поллинг Mattermost на новые сообщения"""
     def __init__(self, config: Config, processor: MessageProcessor):
         self.config = config
         self.processor = processor
-        self.last_post_time = datetime.now(timezone.utc) - timedelta(minutes=5)
+        self.last_post_time = datetime.now(timezone.utc) - timedelta(minutes=POLLING_INTERVAL)
     
     def poll(self, stop_event: Event):
         """Основной цикл поллинга"""
@@ -27,18 +30,20 @@ class MattermostPoller:
                     f"{self.config.mattermost_server_url}/api/v4/channels/{self.config.channel_id}/posts",
                     headers=headers,
                     params={'since': int(self.last_post_time.timestamp() * 1000)},
-                    timeout=15
+                    timeout=MATTERMOSTTIMEOUT
                 )
                 
-                if response.status_code == 200:
+                if response.status_code == HTTP_SUCCESS:
                     self._process_messages(response.json())
                 else:
-                    LOGGER.error(f"Mattermost poll error: {response.text}")
+                    error=response.text
+                    LOGGER.error(MM_POLL_ERROR)
                 
-                time.sleep(5)
+                time.sleep(POLLING_INTERVAL)
             except Exception as e:
-                LOGGER.error(f"Mattermost poll exception: {str(e)}")
-                time.sleep(10)
+                error=str(e)
+                LOGGER.error(MM_POLL_EXCEPTION)
+                time.sleep(ERROR_RETRY_INTERVAL)
     
     def _process_messages(self, messages: dict):
         """Обрабатывает полученные сообщения"""

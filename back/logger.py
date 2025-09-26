@@ -1,5 +1,11 @@
 import logging
 
+from massage_varibles import *
+from varibles import *
+
+from massage_varibles import *
+from varibles import *
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
