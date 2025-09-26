@@ -128,6 +128,24 @@ class Database:
                 error=str(e)
                 LOGGER.error(DB_UPDATE_RESPONSE_ERROR).format(error=error)
                 return False
+    
+    def reset_message_response(self, message_hash: str):
+        """Сбрасывает статус ответа на сообщение"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("""
+                    UPDATE messages 
+                    SET is_responded = 0, response_text = NULL, 
+                        responder_id = NULL, response_time = NULL
+                    WHERE message_hash = ?
+                """, (message_hash,))
+                self.conn.commit()
+                return cursor.rowcount > 0
+            except Error as e:
+                error = str(e)
+                LOGGER.error(DB_UPDATE_RESPONSE_ERROR).format(error=error)
+                return False
 
     def add_or_update_user(self, user_id: str, username: str = None, 
                             first_name: str = None, last_name: str = None, 
