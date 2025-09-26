@@ -257,7 +257,7 @@ class MessageProcessor:
     def _send_periodic_reminders(self, message_data: dict, stop_event: Event):
         """Отправляет периодические напоминания об активной задаче"""
         reminder_count = 0
-        
+
         while not stop_event.is_set() and reminder_count < MAX_REMINDERS:
             # Ждем 7 минут перед отправкой напоминания
             stop_event.wait(REMINDER_TIME * 60)  # 7 минут в секундах
@@ -345,16 +345,22 @@ class MessageProcessor:
         return md5(f"{message}-{channel_id}-{post_id}".encode()).hexdigest()
     
     def _is_working_time(self) -> bool:
-        """Проверяет, находится ли текущее время в нерабочих часах"""
+        """Проверяет, находится ли текущее время в рабочих часах и рабочих днях"""
         now_ekb = datetime.now(self.config.ekb_tz)
         now_msk = datetime.now(self.config.msk_tz)
         
+        # Проверяем, является ли сегодня выходным днем (суббота или воскресенье)
+        if now_ekb.weekday() >= 5:  # 5 - суббота, 6 - воскресенье
+            return False
+        
+        # Проверяем рабочие часы
         ekb_hour = now_ekb.hour
         msk_hour = now_msk.hour
         
         ekb_time = self.config.non_working_hours['екб']
         msk_time = self.config.non_working_hours['мск']
         
+        # True - рабочее время, False - нерабочее время
         return (ekb_time['start'] <= ekb_hour < ekb_time['end'] and 
                 msk_time['start'] <= msk_hour < msk_time['end'])
     
