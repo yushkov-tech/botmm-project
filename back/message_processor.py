@@ -82,14 +82,14 @@ class MessageProcessor:
                         first_name=random_user[3]
                         last_name=random_user[4]
                         email=random_user[6]
-                        telegram=random_user[7]
+                        telegram=random_user[8]
                         user_info = SPECIALIST_INFO_TEMPLATE.format(
                             first_name=first_name,
                             last_name=last_name,
                             email=email,
                             telegram=telegram,
                         )
-                                # Отправка гифки
+                        # Отправка гифки
                         gif_url = "https://i.pinimg.com/originals/7d/a9/f0/7da9f09c8b61866d87a5c0db8e4957db.gif"
                         self.telegram_bot.send_animation(message.chat.id, gif_url)
                         self.telegram_bot.send_message(message.chat.id, user_info)
@@ -195,23 +195,31 @@ class MessageProcessor:
             message_data = self.pending_responses.get(call.message.message_id)
             if call.data == "introduce":
                 self.telegram_bot.send_message(call.message.chat.id, EMAIL_PROMPT)
-            elif message_data and call.data == "take_work":
+            elif message_data and call.data == CALLBACK_TAKE_WORK:
                 user_id = call.from_user.id
                 
                 # Переключаем состояние is_actual
                 message_data['is_actual'] = not message_data['is_actual']
-                
+                db_message = self.db.get_message_by_hash(message_data['message_hash'])
                 # Обновляем текст кнопки
                 if message_data['is_actual']:
                     button_text = BUTTON_TAKE_WORK
+                    self._send_to_mattermost(
+                        db_message[3],
+                        TASK_GIVEN_AWAY_CONFIRMATION,
+                        db_message[4]
+                    )
                 else:
                     user_name=f'{call.from_user.first_name} {call.from_user.last_name}'
                     button_text = TASK_TAKEN_CONFIRMATION.format(user_name=user_name,)
                     
-                    # Создаем задачу в базе данных
-                    db_message = self.db.get_message_by_hash(message_data['message_hash'])
                     if db_message:
                         self.db.create_task(db_message[0], str(user_id))
+                    self._send_to_mattermost(
+                        db_message[3],
+                        TASK_TAKEN_CONFIRMATION.format(user_name=call.from_user.full_name),
+                        db_message[4]
+                    )
                 
                 # Обновляем сообщение с новой кнопкой
                 mm_link = self._format_mattermost_link(message_data['post_id'])
@@ -229,7 +237,7 @@ class MessageProcessor:
                 ))
                 markup.add(telebot.types.InlineKeyboardButton(
                     text=button_text,
-                    callback_data="take_work"
+                    callback_data=CALLBACK_TAKE_WORK
                 ))
                 
                 # Обновляем сообщение
@@ -422,7 +430,7 @@ class MessageProcessor:
             user_id, username_tg, position, time_zone = user
             if user_id is not None and time_zone.lower() in self.config.non_working_hours:
                 working_hours = self.config.non_working_hours[time_zone.lower()]
-                if working_hours['start'] <= current_hour < working_hours['end']:
+                if not working_hours['start'] <= current_hour < working_hours['end']:
                     working_usernames.append(username_tg)
 
         # Создаем текст сообщения
@@ -432,7 +440,8 @@ class MessageProcessor:
             position=position,
             profile_url=profile_url,
             first_name=first_name,
-            last_name=last_name)
+            last_name=last_name,
+            message=message)
         # Добавляем информацию о рабочих пользователях, если есть
         if working_usernames:
             message_text += ATTENTION_PREFIX
@@ -452,7 +461,7 @@ class MessageProcessor:
             ))
             markup.add(telebot.types.InlineKeyboardButton(
                 text=BUTTON_TAKE_WORK,
-                callback_data="take_work"
+                callback_data=CALLBACK_TAKE_WORK
             ))
             
             # Отправляем сообщение
@@ -526,7 +535,7 @@ class MessageProcessor:
             ))
             markup.add(telebot.types.InlineKeyboardButton(
                 text=BUTTON_TAKE_WORK,
-                callback_data="take_work"
+                callback_data=CALLBACK_TAKE_WORK
             ))
             
             # Отправляем сообщение

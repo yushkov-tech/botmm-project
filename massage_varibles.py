@@ -2,7 +2,7 @@
 BOT_COMMAND_START = "/start"
 BOT_COMMAND_HELP = "/help"
 BOT_COMMAND_INFO = "/info"
-BOT_COMMAND_FAIR = "/ярмарка"
+BOT_COMMAND_FAIR = "/yarmarka"
 
 # Приветственные сообщения
 WELCOME_MESSAGE = "Добро пожаловать! Я бот Валера.\nЯ помогу вам держать контакт между телеграмом и маттермостом."
@@ -11,7 +11,7 @@ HELP_MESSAGE = (
     "/start - Начать взаимодействие с ботом\n"
     "/help - Получить список доступных команд\n"
     "/info - Получить информацию о боте\n"
-    "/ярмарка - Получить информацию о боте"
+    "/yarmarka - Получить информацию о боте"
 )
 
 INFO_MESSAGE = (
@@ -67,7 +67,8 @@ ATTENTION_PREFIX = "Внимание: "
 
 # Ответы и подтверждения
 RESPONSE_SENT_CONFIRMATION = "Ваш ответ отправлен в Mattermost!"
-TASK_TAKEN_CONFIRMATION = "Задача взята в работу пользователем: {user_name}"
+TASK_TAKEN_CONFIRMATION = "Задача взята в работу, исполнитель {user_name}"
+TASK_GIVEN_AWAY_CONFIRMATION = "Задача вновь ищет исполнителя"
 
 # Информация о пользователях
 SPECIALIST_INFO_TEMPLATE = (
