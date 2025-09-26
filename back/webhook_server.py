@@ -7,6 +7,9 @@ from back.database import *
 from back.message_processor import *
 from back.config import *
 
+from massage_varibles import *
+from varibles import *
+
 class WebhookServer:
     """Сервер для обработки вебхуков"""
     def __init__(self, config: Config, processor: MessageProcessor):
@@ -36,5 +39,6 @@ class WebhookServer:
             try:
                 self.app.run(port=5000, threaded=True)
             except Exception as e:
-                LOGGER.error(f"Webhook server error: {str(e)}")
+                error=str(e)
+                LOGGER.error(WEBHOOK_SERVER_ERROR)
                 time.sleep(5)

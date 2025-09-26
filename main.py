@@ -1,6 +1,9 @@
 import time
 from threading import Thread, Event
 
+from massage_varibles import *
+from varibles import *
+
 from back.database import *
 from back.logger import *
 from back.mattermost_poller import *
@@ -36,10 +39,11 @@ def main():
             time.sleep(1)
             
     except KeyboardInterrupt:
-        LOGGER.info("Shutting down...")
+        LOGGER.error(SHUTDOWN_MESSAGE)
         stop_event.set()
     except Exception as e:
-        LOGGER.error(f"Fatal error: {str(e)}")
+        error=str(e)
+        LOGGER.error(FATAL_ERROR)
         stop_event.set()
     finally:
         if 'db' in locals():

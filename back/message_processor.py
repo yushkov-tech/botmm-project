@@ -11,13 +11,16 @@ from back.database import *
 
 from back.config import *
 
+from massage_varibles import *
+from varibles import *
+
 class MessageProcessor:
     """Обработчик сообщений с расширенной функциональностью"""
     def __init__(self, config: Config, db: Database):
         self.config = config
         self.db = db
         self.telegram_bot = telebot.TeleBot(config.telegram_bot_token)
-        self.message_queue = Queue(maxsize=100)
+        self.message_queue = Queue(maxsize=MESSAGE_QUEUE_MAXSIZE)
         self.processed_messages = set()
         self.pending_responses = {}
         self.lock = Lock()
@@ -47,82 +50,64 @@ class MessageProcessor:
                 
                 self.telegram_bot.send_message(
                     message.chat.id,
-                    "Ваш ответ отправлен в Mattermost!",
+                    RESPONSE_SENT_CONFIRMATION,
                     reply_to_message_id=message.message_id
                 )
                 return
             
             elif message.text.startswith('/'):
-                if message.text=='/start' or message.text=='/start@taxmon_python_test_bot':
+                if message.text==BOT_COMMAND_START or message.text==BOT_COMMAND_START+'@taxmon_python_test_bot':
                     markup = telebot.types.InlineKeyboardMarkup()
                     markup.add(telebot.types.InlineKeyboardButton(
-                            text="Познакомиться",
-                            callback_data='introduce'
+                            text=BUTTON_INTRODUCE,
+                            callback_data=CALLBACK_INTRODUCE
                         ))
                         
                     self.telegram_bot.send_message(
                         message.chat.id,
-                        "Добро пожаловать! Я бот Валера. \nЯ помогу вам держать контакт между телеграмом и маттермостом.",
+                        WELCOME_MESSAGE,
                         parse_mode='HTML',
                         reply_markup=markup,
                         disable_web_page_preview=True
                     )
 
-                elif message.text=='/help' or message.text=='/help@taxmon_python_test_bot':
-                    help_text = (
-                        "Доступные команды:\n"
-                        "/start - Начать взаимодействие с ботом\n"
-                        "/help - Получить список доступных команд\n"
-                        "/info - Получить информацию о боте\n"
-                        "/ярмарка - Получить информацию о боте\n"
-                    )
+                elif message.text==BOT_COMMAND_HELP or message.text==BOT_COMMAND_HELP+'@taxmon_python_test_bot':
+                    help_text = HELP_MESSAGE
                     self.telegram_bot.reply_to(message, help_text)
                     return
 
-                elif message.text == '/ярмарка' or message.text=='/ярмарка@taxmon_python_test_bot':
+                elif message.text == BOT_COMMAND_FAIR or message.text==BOT_COMMAND_FAIR+'@taxmon_python_test_bot':
                     random_user = self._get_random_user_by_position('Специалист по интеграции')
                     if random_user:
-                        user_info = f"Случайный специалист по внедрению:\n" \
-                                    f"Имя: {random_user[3]}\n" \
-                                    f"Фамилия: {random_user[4]}\n" \
-                                    f"Email: {random_user[6]}\n" \
-                                    f"Telegram: {random_user[7]}"
+                        first_name=random_user[3]
+                        last_name=random_user[4]
+                        email=random_user[6]
+                        telegram=random_user[7]
+                        user_info = SPECIALIST_INFO_TEMPLATE
                                 # Отправка гифки
                         gif_url = "https://i.pinimg.com/originals/7d/a9/f0/7da9f09c8b61866d87a5c0db8e4957db.gif"
                         self.telegram_bot.send_animation(message.chat.id, gif_url)
                         self.telegram_bot.send_message(message.chat.id, user_info)
                     else:
-                        self.telegram_bot.send_message(message.chat.id, "❌ Нет специалистов по внедрению.")
+                        self.telegram_bot.send_message(message.chat.id, NO_SPECIALISTS_ERROR)
                 
-                elif message.text=='/info' or message.text=='/info@taxmon_python_test_bot':
-                    info_text = (
-                        "🌟 **Добро пожаловать в мир оперативного (налогового) мониторинга!** 🌟\n\n"
-                        "Этот бот создан для того, чтобы вы могли быстро реагировать на сообщения в Mattermost, даже вне рабочего времени.\n\n"
-                        "🔔 **Что вас ждет?**\n"
-                        "- Вне рабочего времени по Екатеринбургу вы будете получать уведомления в чат из Mattermost.\n"
-                        "- Вы можете взять задачи в работу, ответить на них, перейти по ссылкам для подробностей или просто проигнорировать.\n\n"
-                        "💬 **Как это работает?**\n"
-                        "- Если вы отвечаете на сообщения бота, ваше сообщение автоматически отправляется в тред Mattermost.\n"
-                        "- Если вы берете задачу в работу, она закрепляется за вами. Если никто не взял её, сообщение будет отправлено менеджменту проекта.\n\n"
-                        "🔗 **Не забывайте:**\n"
-                        "Чтобы узнать подробности о сообщении, просто пройдите по ссылкам или нажмите на кнопки, предоставленные ботом.\n\n"
-                        "🤖 **Давайте сделаем вашу работу более эффективной!**"
-                    )
+                elif message.text==BOT_COMMAND_INFO or message.text==BOT_COMMAND_INFO+'@taxmon_python_test_bot':
+                    info_text = INFO_MESSAGE
                     self.telegram_bot.reply_to(message, info_text, parse_mode='Markdown')
                     return
 
             # Обработчик текстовых сообщений
             elif message.reply_to_message is not None:
-                if message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text=='📧 Пожалуйста, ответьте на это сообщение вашей корпоративную почтой:':
+                if message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text==EMAIL_PROMPT:
                     def _is_valid_email(email: str) -> bool:
                         """Проверяет валидность email адреса"""
-                        pattern = r'^[a-zA-Z0-9._%+-]+@skbkontur.ru$'
+                        pattern = EMAIL_PATTERN
                         return re.match(pattern, email) is not None
                     email = message.text.strip()
                     
                     # Проверяем валидность email
                     if not _is_valid_email(email):
-                        self.telegram_bot.send_message(message.chat.id, "❌ Пожалуйста, введите корректный email адрес(@skbkontur.ru).")
+                        self.telegram_bot.send_message(message.chat.id, EMAIL_VALIDATION_ERROR)
                         return
                     
                     user_id = message.from_user.id
@@ -150,14 +135,12 @@ class MessageProcessor:
                         ):
                             self.telegram_bot.send_message(
                                 message.chat.id,
-                                f"✅ Информация обновлена!\n"
-                                f"Email: {email}\n"
-                                f"Теперь вы связаны с этим аккаунтом."
+                                EMAIL_UPDATE_SUCCESS
                             )
                             if time_zone == None:
-                                self.telegram_bot.send_message(message.chat.id, '🌏 Пожалуйста, ответьте на это сообщение вашим часовым поясом (Мск/Екб)')
+                                self.telegram_bot.send_message(message.chat.id, TIMEZONE_PROMPT)
                         else:
-                            self.telegram_bot.send_message(message.chat.id, "❌ Ошибка при обновлении информации.")
+                            self.telegram_bot.send_message(message.chat.id, EMAIL_UPDATE_ERROR)
                     else:
                         # Новый email - создаем запись
                         if self.db.add_or_update_user(
@@ -169,11 +152,11 @@ class MessageProcessor:
                         ):
                             self.telegram_bot.send_message(
                                 message.chat.id,
-                                f"✅ Отлично! Ваш email сохранен: {email}\n"
+                                EMAIL_SAVE_SUCCESS
                             )
                         else:
-                            self.telegram_bot.send_message(message.chat.id, "❌ Ошибка при сохранении email.")
-                elif message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text=='🌏 Пожалуйста, ответьте на это сообщение вашим часовым поясом (Мск/Екб)':
+                            self.telegram_bot.send_message(message.chat.id, EMAIL_SAVE_ERROR)
+                elif message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text==TIMEZONE_PROMPT:
                     time_zone = message.text.strip()
                     
                     user_id = message.from_user.id
@@ -195,18 +178,18 @@ class MessageProcessor:
                         ):
                             self.telegram_bot.send_message(
                                 message.chat.id,
-                                f"✅ Ваш часовой пояс сохранен: {time_zone}\n"
+                                TIMEZONE_SAVE_SUCCESS
                             )
                         else:
-                            self.telegram_bot.send_message(message.chat.id, "❌ Ошибка при обновлении часового пояса.")
+                            self.telegram_bot.send_message(message.chat.id, TIMEZONE_SAVE_ERROR)
                     else:
-                        self.telegram_bot.send_message(message.chat.id, "❌ Пользователь не найден в базе данных.")                        
+                        self.telegram_bot.send_message(message.chat.id, USER_NOT_FOUND_ERROR)                        
 
         @self.telegram_bot.callback_query_handler(func=lambda call: True)
         def handle_callback_query(call):
             message_data = self.pending_responses.get(call.message.message_id)
             if call.data == "introduce":
-                self.telegram_bot.send_message(call.message.chat.id, "📧 Пожалуйста, ответьте на это сообщение вашей корпоративную почтой:")
+                self.telegram_bot.send_message(call.message.chat.id, EMAIL_PROMPT)
             elif message_data and call.data == "take_work":
                 user_id = call.from_user.id
                 
@@ -215,9 +198,10 @@ class MessageProcessor:
                 
                 # Обновляем текст кнопки
                 if message_data['is_actual']:
-                    button_text = "Взять в работу"
+                    button_text = BUTTON_TAKE_WORK
                 else:
-                    button_text = f"Задача взята в работу пользователем: {call.from_user.first_name} {call.from_user.last_name}"
+                    user_name=f'{call.from_user.first_name} {call.from_user.last_name}'
+                    button_text = TASK_TAKEN_CONFIRMATION
                     
                     # Создаем задачу в базе данных
                     db_message = self.db.get_message_by_hash(message_data['message_hash'])
@@ -236,7 +220,7 @@ class MessageProcessor:
                 ))
                 markup.add(telebot.types.InlineKeyboardButton(
                     text="Перейти к сообщению в лс Mattermost",
-                    url=f"https://chat.skbkontur.ru/kontur/messages/@{username}"
+                    url=MM_DIRECT_MESSAGE_URL_TEMPLATE
                 ))
                 markup.add(telebot.types.InlineKeyboardButton(
                     text=button_text,
@@ -328,9 +312,9 @@ class MessageProcessor:
             response = requests.get(
                 f"{self.config.mattermost_server_url}/api/v4/users/{user_id}",
                 headers=headers,
-                timeout=5
+                timeout=MASSAGETIMEOUT
             )
-            if response.status_code == 200:
+            if response.status_code == HTTP_SUCCESS:
                 user_data = response.json()
                 user_data_from_bd=self.db.get_user_email(user_data.get('email'))
                 if user_data_from_bd != None:
@@ -375,7 +359,7 @@ class MessageProcessor:
             "message": message,
         }
         
-        if post_id and len(post_id) == 26:
+        if post_id and len(post_id) == MATTERMOST_POST_ID_LENGTH:
             payload["root_id"] = post_id
             
         try:
@@ -383,16 +367,18 @@ class MessageProcessor:
                 f"{self.config.mattermost_server_url}/api/v4/posts",
                 headers=headers,
                 json=payload,
-                timeout=10
+                timeout=USERTIMEOUT
             )
-            if response.status_code != 201:
-                LOGGER.error(f"Mattermost error: {response.text}")
+            if response.status_code != HTTP_CREATED:
+                error=response.text
+                LOGGER.error(MM_USER_INFO_ERROR)
         except Exception as e:
-            LOGGER.error(f"Mattermost send error: {str(e)}")
-    
+            error=str(e)
+            LOGGER.error(MM_USER_INFO_ERROR)
+            
     def _format_mattermost_link(self, post_id: str) -> str:
         """Форматирует правильную ссылку на сообщение в Mattermost"""
-        if not post_id or len(post_id) != 26:
+        if not post_id or len(post_id) != MATTERMOST_POST_ID_LENGTH:
             return "Ссылка недоступна"
         
         # Удаляем возможные пробелы или спецсимволы в post_id
@@ -435,14 +421,12 @@ class MessageProcessor:
                     working_usernames.append(username_tg)
 
         # Создаем текст сообщения
-        message_text = (
-            f"🚨 Новое сообщение! 🚨\n\n"
-            f"От: {position}:<a href='https://staff.skbkontur.ru/profile/{username}'><b> {first_name} {last_name}</b></a>\n\n"
-            f"Сообщение: {message_data['message']}\n"
-        )
+        profile_url=STAFF_PROFILE_URL_TEMPLATE
+        message=message_data['message']
+        message_text = NEW_MESSAGE_TEMPLATE
         # Добавляем информацию о рабочих пользователях, если есть
         if working_usernames:
-            message_text += "Внимание: "
+            message_text += ATTENTION_PREFIX
         for working in working_usernames:
             message_text += '@' + working + ' '
 
@@ -450,15 +434,15 @@ class MessageProcessor:
             # Создаем клавиатуру с кнопкой
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(telebot.types.InlineKeyboardButton(
-                text="Перейти к сообщению в Mattermost",
+                text=BUTTON_GO_TO_MM,
                 url=mm_link
             ))
             markup.add(telebot.types.InlineKeyboardButton(
-                text="Перейти к сообщению в лс Mattermost",
-                url=f"https://chat.skbkontur.ru/kontur/messages/@{username}"
+                text=BUTTON_GO_TO_DM,
+                url=MM_DIRECT_MESSAGE_URL_TEMPLATE
             ))
             markup.add(telebot.types.InlineKeyboardButton(
-                text="Взять в работу",
+                text=BUTTON_TAKE_WORK,
                 callback_data="take_work"
             ))
             
@@ -478,11 +462,12 @@ class MessageProcessor:
             Thread(target=self._check_response, args=(message_data,)).start()
             
         except Exception as e:
-            LOGGER.error(f"Ошибка отправки в Telegram: {str(e)}")
+            error=str(e)
+            LOGGER.error(TG_SEND_ERROR)
 
     def _check_response(self, message_data: dict):
         """Проверяет, был ли ответ на сообщение"""
-        time.sleep(360)  # Ждем 1 час
+        time.sleep(RESPONSE_CHECK_TIMEOUT)  # Ждем 1 час
         
         with self.lock:
             if message_data['post_id'] not in [msg['post_id'] for msg in self.pending_responses.values()]:
@@ -510,11 +495,9 @@ class MessageProcessor:
         mm_link = self._format_mattermost_link(message_data['post_id'])
         
         # Создаем текст сообщения
-        message_text = (
-            f"⚠️ Никто не ответил на обращение ⚠️\n\n"
-            f"От: {position}:<a href='https://staff.skbkontur.ru/profile/{username}'><b> {first_name} {last_name}</b></a>\n\n"
-            f"Сообщение: {message_data['message']}\n"
-        )
+        profile_url=STAFF_PROFILE_URL_TEMPLATE
+        message=message_data['message']
+        message_text = NO_RESPONSE_NOTIFICATION
 
         try:
             # Создаем клавиатуру с кнопкой
@@ -525,10 +508,10 @@ class MessageProcessor:
             ))
             markup.add(telebot.types.InlineKeyboardButton(
                 text="Перейти к сообщению в лс Mattermost",
-                url=f"https://chat.skbkontur.ru/kontur/messages/@{username}"
+                url=MM_DIRECT_MESSAGE_URL_TEMPLATE
             ))
             markup.add(telebot.types.InlineKeyboardButton(
-                text="Взять в работу",
+                text=BUTTON_TAKE_WORK,
                 callback_data="take_work"
             ))
             
@@ -548,7 +531,8 @@ class MessageProcessor:
             Thread(target=self._check_response, args=(message_data,)).start()
             
         except Exception as e:
-            LOGGER.error(f"Ошибка отправки в Telegram: {str(e)}")
+            error=str(e)
+            LOGGER.error(TG_SEND_ERROR)
     
     def start_processing(self, stop_event: Event):
         """Запускает обработку сообщений"""
