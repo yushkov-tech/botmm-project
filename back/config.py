@@ -26,6 +26,6 @@ class Config:
         
         # Настройки времени
         self.non_working_hours = {
-            'екб': {'start': 6 , 'end': 7},
-            'мск': {'start': 6, 'end': 7}
+            'екб': {'start': 9 , 'end': 18},
+            'мск': {'start': 7, 'end': 16}
         }

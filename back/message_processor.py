@@ -188,28 +188,57 @@ class MessageProcessor:
                         else:
                             self.telegram_bot.send_message(message.chat.id, TIMEZONE_SAVE_ERROR)
                     else:
-                        self.telegram_bot.send_message(message.chat.id, USER_NOT_FOUND_ERROR)                      
+                        self.telegram_bot.send_message(message.chat.id, USER_NOT_FOUND_ERROR)
 
+
+        """Настройка обработчиков команд Telegram"""
         @self.telegram_bot.callback_query_handler(func=lambda call: True)
         def handle_callback_query(call):
             message_data = self.pending_responses.get(call.message.message_id)
             if call.data == "introduce":
                 self.telegram_bot.send_message(call.message.chat.id, EMAIL_PROMPT)
-            elif message_data and call.data == CALLBACK_TAKE_WORK:
+            elif message_data and call.data == "take_work":
                 user_id = call.from_user.id
                 
-                # Переключаем состояние is_actual
-                message_data['is_actual'] = not message_data['is_actual']
-                db_message = self.db.get_message_by_hash(message_data['message_hash'])
-                # Обновляем текст кнопки
-                if message_data['is_actual']:
-                    button_text = BUTTON_TAKE_WORK
-                    self._send_to_mattermost(
-                        db_message[3],
-                        TASK_GIVEN_AWAY_CONFIRMATION,
-                        db_message[4]
+                # Определяем текущее состояние
+                current_state = message_data.get('is_actual', True)
+                
+                if current_state:
+                    # Кнопка нажата впервые - ОСТАНАВЛИВАЕМ напоминания
+                    user_name = f'{call.from_user.first_name} {call.from_user.last_name}'
+                    button_text = TASK_TAKEN_CONFIRMATION.format(user_name=user_name)
+                    message_data['is_actual'] = False  # Напоминания ВЫКЛЮЧЕНЫ
+                    
+                    # ОТМЕЧАЕМ В БД, ЧТО ОТВЕТ ПРОИЗОШЕЛ
+                    self.db.update_message_response(
+                        message_data['message_hash'],
+                        f"Задача взята в работу пользователем {user_name} (TG ID: {user_id})",
+                        str(user_id),
+                        time.time()
                     )
-                    # Запускаем периодические напоминания
+                    
+                    # Создаем задачу в базе данных
+                    db_message = self.db.get_message_by_hash(message_data['message_hash'])
+                    if db_message:
+                        self.db.create_task(db_message[0], str(user_id))
+                    
+                    # Останавливаем напоминания
+                    if 'stop_reminder' in message_data:
+                        message_data['stop_reminder'].set()
+                        
+                else:
+                    # Кнопка нажата повторно - ВКЛЮЧАЕМ напоминания снова
+                    button_text = BUTTON_TAKE_WORK
+                    message_data['is_actual'] = True  # Напоминания ВКЛЮЧЕНЫ
+                    
+                    # СБРАСЫВАЕМ СТАТУС ОТВЕТА В БД
+                    self.db.reset_message_response(message_data['message_hash'])
+                    
+                    # Перезапускаем напоминания
+                    if 'stop_reminder' in message_data:
+                        message_data['stop_reminder'].set()  # Останавливаем старый поток
+                    
+                    # Запускаем новые напоминания
                     message_data['stop_reminder'] = Event()
                     message_data['reminder_thread'] = Thread(
                         target=self._send_periodic_reminders, 
@@ -217,72 +246,66 @@ class MessageProcessor:
                         daemon=True
                     )
                     message_data['reminder_thread'].start()
-                else:
-                    user_name=f'{call.from_user.first_name} {call.from_user.last_name}'
-                    button_text = TASK_TAKEN_CONFIRMATION.format(user_name=user_name,)
-                    
-                    # Создаем задачу в базе дан
-                    if db_message:
-                        self.db.create_task(db_message[0], str(user_id))                    
-                        if 'reminder_thread' in message_data:
-                            message_data['stop_reminder'].set()
-                    self._send_to_mattermost(
-                        db_message[3],
-                        TASK_TAKEN_CONFIRMATION.format(user_name=call.from_user.full_name),
-                        db_message[4]
-                    )
                 
                 # Обновляем сообщение с новой кнопкой
-                mm_link = self._format_mattermost_link(message_data['post_id'])
-                user_info = self._get_user_info(message_data['user_id'])
-                username = user_info.get('username', '') if user_info else ''
-                
-                markup = telebot.types.InlineKeyboardMarkup()
-                markup.add(telebot.types.InlineKeyboardButton(
-                    text="Перейти к сообщению в Mattermost",
-                    url=mm_link
-                ))
-                markup.add(telebot.types.InlineKeyboardButton(
-                    text="Перейти к сообщению в лс Mattermost",
-                    url=MM_DIRECT_MESSAGE_URL_TEMPLATE.format(username=username)
-                ))
-                markup.add(telebot.types.InlineKeyboardButton(
-                    text=button_text,
-                    callback_data=CALLBACK_TAKE_WORK
-                ))
-                
-                # Обновляем сообщение
-                self.telegram_bot.edit_message_text(
-                    chat_id=call.message.chat.id,
-                    message_id=call.message.message_id,
-                    text=call.message.html_text,
-                    parse_mode='HTML',
-                    reply_markup=markup
-                )
+                self._update_message_with_new_button(call.message, message_data, button_text)
                 
                 # Подтверждаем, что запрос обработан
                 self.telegram_bot.answer_callback_query(call.id)
-    
+
+        
     def _send_periodic_reminders(self, message_data: dict, stop_event: Event):
         """Отправляет периодические напоминания об активной задаче"""
         reminder_count = 0
-        max_reminders = 12  # Максимум 12 напоминаний (1.5 часа)
         
-        while not stop_event.is_set() and reminder_count < max_reminders:
+        while not stop_event.is_set() and reminder_count < MAX_REMINDERS:
             # Ждем 7 минут перед отправкой напоминания
-            stop_event.wait(1 * 60)  # 7 минут в секундах
+            stop_event.wait(REMINDER_TIME * 60)  # 7 минут в секундах
             
             if stop_event.is_set():
                 break
                 
+            # Проверяем, что задача все еще активна (напоминания ВКЛЮЧЕНЫ)
+            if not message_data.get('is_actual', True):
+                break
+                
             # Проверяем, был ли ответ на сообщение
             db_message = self.db.get_message_by_hash(message_data['message_hash'])
-            if db_message and db_message[8]:  # is_responded
+            if db_message and db_message[8]!=0:  # is_responded
                 break
                 
             # Отправляем напоминание
             self._send_reminder_to_telegram(message_data, reminder_count + 1)
             reminder_count += 1
+
+    def _update_message_with_new_button(self, message, message_data: dict, button_text: str):
+        """Обновляет сообщение с новой кнопкой"""
+        mm_link = self._format_mattermost_link(message_data['post_id'])
+        user_info = self._get_user_info(message_data['user_id'])
+        username = user_info.get('username', '') if user_info else ''
+        
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton(
+            text="Перейти к сообщению в Mattermost",
+            url=mm_link
+        ))
+        markup.add(telebot.types.InlineKeyboardButton(
+            text="Перейти к сообщению в лс Mattermost",
+            url=MM_DIRECT_MESSAGE_URL_TEMPLATE.format(username=username)
+        ))
+        markup.add(telebot.types.InlineKeyboardButton(
+            text=button_text,
+            callback_data="take_work"
+        ))
+        
+        # Обновляем сообщение
+        self.telegram_bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text=message.html_text,
+            parse_mode='HTML',
+            reply_markup=markup
+        )
 
     def _send_reminder_to_telegram(self, message_data: dict, reminder_number: int):
         """Отправляет напоминание в ответ на оригинальное сообщение"""
@@ -539,11 +562,13 @@ class MessageProcessor:
                 disable_web_page_preview=True
             )
             
+            # Изначально задача активна - напоминания ВКЛЮЧЕНЫ
+            message_data['is_actual'] = True
             self.pending_responses[sent_msg.message_id] = {
-                **message_data,
-                'is_actual': True  # Изначально задача активна
+                **message_data
             }
-            # Запускаем периодические напоминания
+            
+            # ЗАПУСКАЕМ напоминания сразу при получении сообщения
             message_data['stop_reminder'] = Event()
             message_data['reminder_thread'] = Thread(
                 target=self._send_periodic_reminders, 
@@ -551,6 +576,7 @@ class MessageProcessor:
                 daemon=True
             )
             message_data['reminder_thread'].start()
+            
             Thread(target=self._check_response, args=(message_data,)).start()
             
         except Exception as e:
@@ -621,10 +647,9 @@ class MessageProcessor:
                 reply_markup=markup,
                 disable_web_page_preview=True
             )
-            
+            message_data['is_actual'] = True
             self.pending_responses[sent_msg.message_id] = {
                 **message_data,
-                'is_actual': True  # Изначально задача активна
             }
             Thread(target=self._check_response, args=(message_data,)).start()
             
