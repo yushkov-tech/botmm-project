@@ -23,9 +23,3 @@ class Config:
         # Временные зоны
         self.ekb_tz = pytz.timezone('Asia/Yekaterinburg')
         self.msk_tz = pytz.timezone('Europe/Moscow')
-        
-        # Настройки времени
-        self.non_working_hours = {
-            'екб': {'start': 9 , 'end': 18},
-            'мск': {'start': 7, 'end': 16}
-        }

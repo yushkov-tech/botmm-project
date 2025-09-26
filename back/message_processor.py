@@ -357,12 +357,9 @@ class MessageProcessor:
         ekb_hour = now_ekb.hour
         msk_hour = now_msk.hour
         
-        ekb_time = self.config.non_working_hours['екб']
-        msk_time = self.config.non_working_hours['мск']
-        
         # True - рабочее время, False - нерабочее время
-        return (ekb_time['start'] <= ekb_hour < ekb_time['end'] and 
-                msk_time['start'] <= msk_hour < msk_time['end'])
+        return (WORK_TIME['start'] <= ekb_hour < WORK_TIME['end'] and 
+                WORK_TIME['start'] <= msk_hour < WORK_TIME['end'])
     
     def process_message(self, message: str, channel_id: str, post_id: str, user_id: str):
         """Обрабатывает входящее сообщение"""
