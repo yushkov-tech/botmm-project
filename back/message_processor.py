@@ -209,12 +209,23 @@ class MessageProcessor:
                         TASK_GIVEN_AWAY_CONFIRMATION,
                         db_message[4]
                     )
+                    # Запускаем периодические напоминания
+                    message_data['stop_reminder'] = Event()
+                    message_data['reminder_thread'] = Thread(
+                        target=self._send_periodic_reminders, 
+                        args=(message_data, message_data['stop_reminder']),
+                        daemon=True
+                    )
+                    message_data['reminder_thread'].start()
                 else:
                     user_name=f'{call.from_user.first_name} {call.from_user.last_name}'
                     button_text = TASK_TAKEN_CONFIRMATION.format(user_name=user_name,)
                     
+                    # Создаем задачу в базе дан
                     if db_message:
-                        self.db.create_task(db_message[0], str(user_id))
+                        self.db.create_task(db_message[0], str(user_id))                    
+                        if 'reminder_thread' in message_data:
+                            message_data['stop_reminder'].set()
                     self._send_to_mattermost(
                         db_message[3],
                         TASK_TAKEN_CONFIRMATION.format(user_name=call.from_user.full_name),
@@ -251,6 +262,60 @@ class MessageProcessor:
                 
                 # Подтверждаем, что запрос обработан
                 self.telegram_bot.answer_callback_query(call.id)
+    
+    def _send_periodic_reminders(self, message_data: dict, stop_event: Event):
+        """Отправляет периодические напоминания об активной задаче"""
+        reminder_count = 0
+        max_reminders = 12  # Максимум 12 напоминаний (1.5 часа)
+        
+        while not stop_event.is_set() and reminder_count < max_reminders:
+            # Ждем 7 минут перед отправкой напоминания
+            stop_event.wait(1 * 60)  # 7 минут в секундах
+            
+            if stop_event.is_set():
+                break
+                
+            # Проверяем, был ли ответ на сообщение
+            db_message = self.db.get_message_by_hash(message_data['message_hash'])
+            if db_message and db_message[8]:  # is_responded
+                break
+                
+            # Отправляем напоминание
+            self._send_reminder_to_telegram(message_data, reminder_count + 1)
+            reminder_count += 1
+
+    def _send_reminder_to_telegram(self, message_data: dict, reminder_number: int):
+        """Отправляет напоминание в ответ на оригинальное сообщение"""
+        # Находим ID первого сообщения о этой задаче
+        first_message_id = self._find_first_message_id(message_data['message_hash'])
+        
+        if not first_message_id:
+            # Если не нашли первое сообщение, пропускаем напоминание
+            LOGGER.warning(f"Не найдено первое сообщение для напоминания #{reminder_number}")
+            return
+        
+        try:
+            # Просто отправляем текст напоминания как reply на первое сообщение
+            reminder_text = REMINDER_MESSAGE.format(reminder_number=reminder_number)
+            
+            self.telegram_bot.send_message(
+                self.config.telegram_chat_id,
+                reminder_text,
+                parse_mode='HTML',
+                reply_to_message_id=first_message_id,
+                disable_web_page_preview=True
+            )
+            
+        except Exception as e:
+            error = str(e)
+            LOGGER.error(TG_SEND_ERROR).format(error=error)
+
+    def _find_first_message_id(self, message_hash: str) -> int:
+        """Находит ID первого сообщения в Telegram по хешу задачи"""
+        for telegram_message_id, message_data in self.pending_responses.items():
+            if message_data.get('message_hash') == message_hash:
+                return telegram_message_id
+        return None
 
     def _get_message_hash(self, message: str, channel_id: str, post_id: str) -> str:
         """Генерирует уникальный хеш для сообщения"""
@@ -436,7 +501,8 @@ class MessageProcessor:
         # Создаем текст сообщения
         profile_url=STAFF_PROFILE_URL_TEMPLATE.format(username=username)
         message=message_data['message']
-        message_text = NEW_MESSAGE_TEMPLATE.format(
+        message_text = MESSAGE_TEMPLATE.format(
+            status=NEW_MESSAGE,
             position=position,
             profile_url=profile_url,
             first_name=first_name,
@@ -477,6 +543,14 @@ class MessageProcessor:
                 **message_data,
                 'is_actual': True  # Изначально задача активна
             }
+            # Запускаем периодические напоминания
+            message_data['stop_reminder'] = Event()
+            message_data['reminder_thread'] = Thread(
+                target=self._send_periodic_reminders, 
+                args=(message_data, message_data['stop_reminder']),
+                daemon=True
+            )
+            message_data['reminder_thread'].start()
             Thread(target=self._check_response, args=(message_data,)).start()
             
         except Exception as e:
@@ -515,7 +589,8 @@ class MessageProcessor:
         # Создаем текст сообщения
         profile_url=STAFF_PROFILE_URL_TEMPLATE.format(username=username)
         message=message_data['message']
-        message_text = NO_RESPONSE_NOTIFICATION.format(
+        message_text = MESSAGE_TEMPLATE.format(
+            status=NO_RESPONSE_MESSAGE,
             position=position,
             profile_url=profile_url,
             first_name=first_name,

@@ -51,17 +51,16 @@ TIMEZONE_SAVE_ERROR = "❌ Ошибка при обновлении часово
 USER_NOT_FOUND_ERROR = "❌ Пользователь не найден в базе данных."
 
 # Новые сообщения
-NEW_MESSAGE_TEMPLATE = (
-    "🚨 Новое сообщение! 🚨\n\n"
+MESSAGE_TEMPLATE = (
+    "{status}\n\n"
     "От: {position}:<a href='{profile_url}'><b> {first_name} {last_name}</b></a>\n\n"
     "Сообщение: {message}\n"
 )
 
-NO_RESPONSE_NOTIFICATION = (
-    "⚠️ Никто не ответил на обращение ⚠️\n\n"
-    "От: {position}:<a href='{profile_url}'><b> {first_name} {last_name}</b></a>\n\n"
-    "Сообщение: {message}\n"
-)
+NEW_MESSAGE = ("🚨 Новое сообщение! 🚨")
+REMINDER_MESSAGE = ("🔔 *Напоминание #{reminder_number}*")
+NO_RESPONSE_MESSAGE= ("⚠️ Никто не ответил на обращение ⚠️\n\n")
+
 
 ATTENTION_PREFIX = "Внимание: "
 
