@@ -83,7 +83,12 @@ class MessageProcessor:
                         last_name=random_user[4]
                         email=random_user[6]
                         telegram=random_user[7]
-                        user_info = SPECIALIST_INFO_TEMPLATE
+                        user_info = SPECIALIST_INFO_TEMPLATE.format(
+                            first_name=first_name,
+                            last_name=last_name,
+                            email=email,
+                            telegram=telegram,
+                        )
                                 # Отправка гифки
                         gif_url = "https://i.pinimg.com/originals/7d/a9/f0/7da9f09c8b61866d87a5c0db8e4957db.gif"
                         self.telegram_bot.send_animation(message.chat.id, gif_url)
@@ -135,7 +140,7 @@ class MessageProcessor:
                         ):
                             self.telegram_bot.send_message(
                                 message.chat.id,
-                                EMAIL_UPDATE_SUCCESS
+                                EMAIL_UPDATE_SUCCESS.format(email=email)
                             )
                             if time_zone == None:
                                 self.telegram_bot.send_message(message.chat.id, TIMEZONE_PROMPT)
@@ -152,7 +157,7 @@ class MessageProcessor:
                         ):
                             self.telegram_bot.send_message(
                                 message.chat.id,
-                                EMAIL_SAVE_SUCCESS
+                                EMAIL_SAVE_SUCCESS.format(email=email)
                             )
                         else:
                             self.telegram_bot.send_message(message.chat.id, EMAIL_SAVE_ERROR)
@@ -178,12 +183,12 @@ class MessageProcessor:
                         ):
                             self.telegram_bot.send_message(
                                 message.chat.id,
-                                TIMEZONE_SAVE_SUCCESS
+                                TIMEZONE_SAVE_SUCCESS.format(time_zone=time_zone)
                             )
                         else:
                             self.telegram_bot.send_message(message.chat.id, TIMEZONE_SAVE_ERROR)
                     else:
-                        self.telegram_bot.send_message(message.chat.id, USER_NOT_FOUND_ERROR)                        
+                        self.telegram_bot.send_message(message.chat.id, USER_NOT_FOUND_ERROR)                      
 
         @self.telegram_bot.callback_query_handler(func=lambda call: True)
         def handle_callback_query(call):
@@ -201,7 +206,7 @@ class MessageProcessor:
                     button_text = BUTTON_TAKE_WORK
                 else:
                     user_name=f'{call.from_user.first_name} {call.from_user.last_name}'
-                    button_text = TASK_TAKEN_CONFIRMATION
+                    button_text = TASK_TAKEN_CONFIRMATION.format(user_name=user_name,)
                     
                     # Создаем задачу в базе данных
                     db_message = self.db.get_message_by_hash(message_data['message_hash'])
@@ -371,10 +376,10 @@ class MessageProcessor:
             )
             if response.status_code != HTTP_CREATED:
                 error=response.text
-                LOGGER.error(MM_USER_INFO_ERROR)
+                LOGGER.error(MM_USER_INFO_ERROR).format(error=error)
         except Exception as e:
             error=str(e)
-            LOGGER.error(MM_USER_INFO_ERROR)
+            LOGGER.error(MM_USER_INFO_ERROR).format(error=error)
             
     def _format_mattermost_link(self, post_id: str) -> str:
         """Форматирует правильную ссылку на сообщение в Mattermost"""
@@ -423,7 +428,11 @@ class MessageProcessor:
         # Создаем текст сообщения
         profile_url=STAFF_PROFILE_URL_TEMPLATE
         message=message_data['message']
-        message_text = NEW_MESSAGE_TEMPLATE
+        message_text = NEW_MESSAGE_TEMPLATE.format(
+            position=position,
+            profile_url=profile_url,
+            first_name=first_name,
+            last_name=last_name)
         # Добавляем информацию о рабочих пользователях, если есть
         if working_usernames:
             message_text += ATTENTION_PREFIX
@@ -463,7 +472,7 @@ class MessageProcessor:
             
         except Exception as e:
             error=str(e)
-            LOGGER.error(TG_SEND_ERROR)
+            LOGGER.error(TG_SEND_ERROR).format(error=error)
 
     def _check_response(self, message_data: dict):
         """Проверяет, был ли ответ на сообщение"""
@@ -497,7 +506,12 @@ class MessageProcessor:
         # Создаем текст сообщения
         profile_url=STAFF_PROFILE_URL_TEMPLATE
         message=message_data['message']
-        message_text = NO_RESPONSE_NOTIFICATION
+        message_text = NO_RESPONSE_NOTIFICATION.format(
+            position=position,
+            profile_url=profile_url,
+            first_name=first_name,
+            last_name=last_name,
+            message=message)
 
         try:
             # Создаем клавиатуру с кнопкой
@@ -532,7 +546,7 @@ class MessageProcessor:
             
         except Exception as e:
             error=str(e)
-            LOGGER.error(TG_SEND_ERROR)
+            LOGGER.error(TG_SEND_ERROR).format(error=error)
     
     def start_processing(self, stop_event: Event):
         """Запускает обработку сообщений"""

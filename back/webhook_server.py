@@ -40,5 +40,5 @@ class WebhookServer:
                 self.app.run(port=5000, threaded=True)
             except Exception as e:
                 error=str(e)
-                LOGGER.error(WEBHOOK_SERVER_ERROR)
+                LOGGER.error(WEBHOOK_SERVER_ERROR).format(error=error)
                 time.sleep(5)

@@ -75,7 +75,7 @@ class Database:
             self.conn.commit()
         except Error as e:
             error=str(e)
-            LOGGER.error(DB_INIT_ERROR)
+            LOGGER.error(DB_INIT_ERROR).format(error=error)
             raise
 
     def add_message(self, message_hash: str, message_text: str, channel_id: str, 
@@ -93,7 +93,7 @@ class Database:
                 return cursor.lastrowid
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_ADD_MESSAGE_ERROR)
+                LOGGER.error(DB_ADD_MESSAGE_ERROR).format(error=error)
                 return None
 
     def get_message_by_hash(self, message_hash: str):
@@ -107,7 +107,7 @@ class Database:
                 return cursor.fetchone()
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_GET_MESSAGE_ERROR)
+                LOGGER.error(DB_GET_MESSAGE_ERROR).format(error=error)
                 return None
 
     def update_message_response(self, message_hash: str, response_text: str, 
@@ -126,7 +126,7 @@ class Database:
                 return cursor.rowcount > 0
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_UPDATE_RESPONSE_ERROR)
+                LOGGER.error(DB_UPDATE_RESPONSE_ERROR).format(error=error)
                 return False
 
     def add_or_update_user(self, user_id: str, username: str = None, 
@@ -156,7 +156,7 @@ class Database:
                 return True
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_USER_UPDATE_ERROR)
+                LOGGER.error(DB_USER_UPDATE_ERROR).format(error=error)
                 return False
 
     def get_user_info(self, user_id: str):
@@ -170,7 +170,7 @@ class Database:
                 return cursor.fetchone()
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_GET_USER_ERROR)
+                LOGGER.error(DB_GET_USER_ERROR).format(error=error)
                 return None
     
     def get_user_info_tg(self, user_id: str):
@@ -184,7 +184,7 @@ class Database:
                 return cursor.fetchone()
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_GET_USER_ERROR)
+                LOGGER.error(DB_GET_USER_ERROR).format(error=error)
                 return None
             
     def get_user_email(self, user_email: str):
@@ -198,7 +198,7 @@ class Database:
                 return cursor.fetchone()
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_GET_USER_ERROR)
+                LOGGER.error(DB_GET_USER_ERROR).format(error=error)
                 return None
 
     def get_users_with_time_zone(self):
@@ -214,7 +214,7 @@ class Database:
                 return users  # Возвращаем список кортежей с данными пользователей
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_GET_USERS_TZ_ERROR)
+                LOGGER.error(DB_GET_USERS_TZ_ERROR).format(error=error)
                 return []
 
     def get_random_user_by_position(self, position: str):
@@ -232,7 +232,7 @@ class Database:
                     return None  # Если нет пользователей с такой позицией
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_RANDOM_USER_ERROR)
+                LOGGER.error(DB_RANDOM_USER_ERROR).format(error=error)
                 return None
 
     def create_task(self, message_id: int, assigned_to: str):
@@ -249,7 +249,7 @@ class Database:
                 return cursor.lastrowid
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_CREATE_TASK_ERROR)
+                LOGGER.error(DB_CREATE_TASK_ERROR).format(error=error)
                 return None
 
     def update_task_status(self, task_id: int, status: str):
@@ -273,7 +273,7 @@ class Database:
                 return cursor.rowcount > 0
             except Error as e:
                 error=str(e)
-                LOGGER.error(DB_UPDATE_TASK_ERROR)
+                LOGGER.error(DB_UPDATE_TASK_ERROR).format(error=error)
                 return False
     
     def get_user_by_email(self, email: str):
@@ -284,7 +284,7 @@ class Database:
             return cursor.fetchone()
         except Error as e:
             error=str(e)
-            LOGGER.error(DB_GET_USER_EMAIL_ERROR)
+            LOGGER.error(DB_GET_USER_EMAIL_ERROR).format(error=error)
             return None
 
     def close(self):

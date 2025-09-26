@@ -55,7 +55,6 @@ NEW_MESSAGE_TEMPLATE = (
     "🚨 Новое сообщение! 🚨\n\n"
     "От: {position}:<a href='{profile_url}'><b> {first_name} {last_name}</b></a>\n\n"
     "Сообщение: {message}\n"
-    "{attention_text}"
 )
 
 NO_RESPONSE_NOTIFICATION = (

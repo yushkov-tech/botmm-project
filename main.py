@@ -43,7 +43,7 @@ def main():
         stop_event.set()
     except Exception as e:
         error=str(e)
-        LOGGER.error(FATAL_ERROR)
+        LOGGER.error(FATAL_ERROR).format(error=error)
         stop_event.set()
     finally:
         if 'db' in locals():
