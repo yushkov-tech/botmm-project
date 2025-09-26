@@ -40,3 +40,5 @@ TG_SEND_ERROR = "Ошибка отправки в Telegram: {error}"
 WEBHOOK_SERVER_ERROR = "Webhook server error: {error}"
 FATAL_ERROR = "Fatal error: {error}"
 SHUTDOWN_MESSAGE = "Shutting down..."
+
+POSITION='Специалист по интеграции'
