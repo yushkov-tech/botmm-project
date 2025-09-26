@@ -37,7 +37,7 @@ class MattermostPoller:
                     self._process_messages(response.json())
                 else:
                     error=response.text
-                    LOGGER.error(MM_POLL_ERROR)
+                    LOGGER.error(MM_POLL_ERROR).format(error=error)
                 
                 time.sleep(POLLING_INTERVAL)
             except Exception as e:
