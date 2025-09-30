@@ -45,4 +45,4 @@ WEBHOOK_SERVER_ERROR = "Webhook server error: {error}"
 FATAL_ERROR = "Fatal error: {error}"
 SHUTDOWN_MESSAGE = "Shutting down..."
 
-POSITION='Специалист по интеграции'
+POSITION='Менеджер проектов по внедрению'
