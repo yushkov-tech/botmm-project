@@ -23,3 +23,5 @@ class Config:
         # Временные зоны
         self.ekb_tz = pytz.timezone('Asia/Yekaterinburg')
         self.msk_tz = pytz.timezone('Europe/Moscow')
+
+        
