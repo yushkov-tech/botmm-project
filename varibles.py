@@ -12,7 +12,7 @@ MM_DIRECT_MESSAGE_URL_TEMPLATE = "https://chat.skbkontur.ru/kontur/messages/@{us
 STAFF_PROFILE_URL_TEMPLATE = "https://staff.skbkontur.ru/profile/{username}"
 HTTP_SUCCESS = 200
 HTTP_CREATED = 201
-MAX_REMINDERS = 3  # Максимум 12 напоминаний (1.5 часа)
+MAX_REMINDERS = 3 
 REMINDER_TIME = 7
 
 WORK_TIME = {'start': 9, 'end': 18}
