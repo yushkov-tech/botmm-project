@@ -225,6 +225,19 @@ class MessageProcessor:
                     # Останавливаем напоминания
                     if 'stop_reminder' in message_data:
                         message_data['stop_reminder'].set()
+                    user_profile = self.db.get_user_info_tg(user_id)
+                    if user_profile:
+                        self._send_to_mattermost(
+                            message_data['channel_id'],
+                            f"Вашей задачей будет заниматься: @{user_profile[2]}",
+                            message_data['post_id']
+                        )
+                    else:
+                        self._send_to_mattermost(
+                            message_data['channel_id'],
+                            f"Ваша задача взята в работу",
+                            message_data['post_id']
+                        )
                         
                 else:
                     # Кнопка нажата повторно - ВКЛЮЧАЕМ напоминания снова
@@ -246,6 +259,12 @@ class MessageProcessor:
                         daemon=True
                     )
                     message_data['reminder_thread'].start()
+
+                    self._send_to_mattermost(
+                        message_data['channel_id'],
+                        f"Задача ищет нового",
+                        message_data['post_id']
+                    )
                 
                 # Обновляем сообщение с новой кнопкой
                 self._update_message_with_new_button(call.message, message_data, button_text)
@@ -253,7 +272,7 @@ class MessageProcessor:
                 # Подтверждаем, что запрос обработан
                 self.telegram_bot.answer_callback_query(call.id)
 
-        
+
     def _send_periodic_reminders(self, message_data: dict, stop_event: Event):
         """Отправляет периодические напоминания об активной задаче"""
         reminder_count = 0
@@ -277,6 +296,7 @@ class MessageProcessor:
             # Отправляем напоминание
             self._send_reminder_to_telegram(message_data, reminder_count + 1)
             reminder_count += 1
+
 
     def _update_message_with_new_button(self, message, message_data: dict, button_text: str):
         """Обновляет сообщение с новой кнопкой"""
@@ -306,6 +326,7 @@ class MessageProcessor:
             parse_mode='HTML',
             reply_markup=markup
         )
+
 
     def _send_reminder_to_telegram(self, message_data: dict, reminder_number: int):
         """Отправляет напоминание в ответ на оригинальное сообщение"""
@@ -506,10 +527,6 @@ class MessageProcessor:
 
         # Форматируем ссылку
         mm_link = self._format_mattermost_link(message_data['post_id'])
-        
-        # Получаем текущее время в нужном часовом поясе
-        current_time = datetime.now(self.config.ekb_tz)
-        current_hour = current_time.hour
 
         # Получаем всех пользователей с их часовыми поясами
         users_in_time_zone = self.db.get_users_with_time_zone()
@@ -519,14 +536,26 @@ class MessageProcessor:
         
         for user in users_in_time_zone:
             user_id, username_tg, position, time_zone = user
-            if user_id is not None and time_zone.lower() in self.config.non_working_hours:
-                working_hours = self.config.non_working_hours[time_zone.lower()]
-                if not working_hours['start'] <= current_hour < working_hours['end']:
+            if user_id is not None and time_zone is not None:
+                # Определяем временную зону
+                if time_zone.lower() == 'мск':
+                    current_time = datetime.now(self.config.msk_tz)
+                elif time_zone.lower() == 'екб':
+                    current_time = datetime.now(self.config.ekb_tz)
+                else:
+                    # Если временная зона не указана или неизвестна, пропускаем пользователя
+                    continue
+                
+                # Получаем текущий час
+                current_hour = current_time.hour
+                
+                # Проверяем рабочее время
+                if not (WORK_TIME['start'] <= current_hour < WORK_TIME['end']):
                     working_usernames.append(username_tg)
 
         # Создаем текст сообщения
         profile_url=STAFF_PROFILE_URL_TEMPLATE.format(username=username)
-        message=message_data['message']
+        message=message_data['message'].replace('@taxmon-manager-assistant', '').strip().replace('@taxmon-manager-assista', '').strip()
         message_text = MESSAGE_TEMPLATE.format(
             status=NEW_MESSAGE,
             position=position,

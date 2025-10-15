@@ -51,7 +51,7 @@ class MattermostPoller:
             post = messages['posts'][post_id]
             
             # Игнорируем сообщения от бота
-            if post['user_id'] == self.config.bot_user_id:
+            if post['user_id'] == self.config.bot_user_id or '@taxmon-manager-assista' not in post['message']:
                 continue
             
             # Проверяем время создания сообщения
