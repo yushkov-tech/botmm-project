@@ -15,7 +15,7 @@ HTTP_CREATED = 201
 MAX_REMINDERS = 3 
 REMINDER_TIME = 7
 
-WORK_TIME = {'start': 9, 'end': 18}
+WORK_TIME = {'start': 9, 'end': 10}
 
 
 # Ошибки базы данных

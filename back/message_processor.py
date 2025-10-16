@@ -257,6 +257,11 @@ class MessageProcessor:
                         f"Задача ищет нового исполнителя",
                         message_data['post_id']
                     )
+
+                    if 'stop_reminder' in message_data:
+                        message_data['stop_reminder'].set()  
+                    
+                    message_data['is_actual'] = True  # Напоминания ВЫКЛЮЧЕНЫ
                 
                 # Обновляем сообщение с новой кнопкой
                 self._update_message_with_new_button(call.message, message_data, button_text)

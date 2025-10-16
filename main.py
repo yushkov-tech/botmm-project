@@ -8,7 +8,6 @@ from back.database import *
 from back.logger import *
 from back.mattermost_poller import *
 from back.message_processor import *
-from back.webhook_server import *
 from back.config import *
 
 def main():
@@ -26,10 +25,6 @@ def main():
         # Запускаем поллинг Mattermost
         poller = MattermostPoller(config, processor)
         Thread(target=poller.poll, args=(stop_event,), daemon=True).start()
-        
-        # Запускаем вебхук сервер
-        webhook_server = WebhookServer(config, processor)
-        Thread(target=webhook_server.run, args=(stop_event,), daemon=True).start()
         
         # Запускаем Telegram бота
         Thread(target=processor.telegram_bot.infinity_polling, daemon=True).start()
