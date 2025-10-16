@@ -103,7 +103,7 @@ class MessageProcessor:
 
             # Обработчик текстовых сообщений
             elif message.reply_to_message is not None:
-                if message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text==EMAIL_PROMPT:
+                if message.reply_to_message.from_user.username == 'taxmon-manager-assistant' and message.reply_to_message.html_text==EMAIL_PROMPT:
                     def _is_valid_email(email: str) -> bool:
                         """Проверяет валидность email адреса"""
                         pattern = EMAIL_PATTERN
@@ -142,8 +142,7 @@ class MessageProcessor:
                                 message.chat.id,
                                 EMAIL_UPDATE_SUCCESS.format(email=email)
                             )
-                            if time_zone == None:
-                                self.telegram_bot.send_message(message.chat.id, TIMEZONE_PROMPT)
+                            self.telegram_bot.send_message(message.chat.id, TIMEZONE_PROMPT)
                         else:
                             self.telegram_bot.send_message(message.chat.id, EMAIL_UPDATE_ERROR)
                     else:
@@ -161,7 +160,7 @@ class MessageProcessor:
                             )
                         else:
                             self.telegram_bot.send_message(message.chat.id, EMAIL_SAVE_ERROR)
-                elif message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text==TIMEZONE_PROMPT:
+                elif message.reply_to_message.from_user.username == 'taxmon-manager-assistant' and message.reply_to_message.html_text==TIMEZONE_PROMPT:
                     time_zone = message.text.strip()
                     
                     user_id = message.from_user.id
