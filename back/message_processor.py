@@ -242,14 +242,6 @@ class MessageProcessor:
                 else:
                     # Кнопка нажата повторно - ВКЛЮЧАЕМ напоминания снова
                     button_text = BUTTON_TAKE_WORK
-                    message_data['is_actual'] = True  # Напоминания ВКЛЮЧЕНЫ
-                    
-                    # СБРАСЫВАЕМ СТАТУС ОТВЕТА В БД
-                    self.db.reset_message_response(message_data['message_hash'])
-                    
-                    # Перезапускаем напоминания
-                    if 'stop_reminder' in message_data:
-                        message_data['stop_reminder'].set()  # Останавливаем старый поток
                     
                     # Запускаем новые напоминания
                     message_data['stop_reminder'] = Event()
@@ -262,7 +254,7 @@ class MessageProcessor:
 
                     self._send_to_mattermost(
                         message_data['channel_id'],
-                        f"Задача ищет нового",
+                        f"Задача ищет нового исполнителя",
                         message_data['post_id']
                     )
                 
@@ -683,7 +675,6 @@ class MessageProcessor:
             self.pending_responses[sent_msg.message_id] = {
                 **message_data,
             }
-            Thread(target=self._check_response, args=(message_data,)).start()
             
         except Exception as e:
             error=str(e)
