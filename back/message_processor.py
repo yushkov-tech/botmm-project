@@ -56,7 +56,7 @@ class MessageProcessor:
                 return
             
             elif message.text.startswith('/'):
-                if message.text==BOT_COMMAND_START or message.text==BOT_COMMAND_START+'@taxmon_python_test_bot':
+                if message.text==BOT_COMMAND_START or (BOT_COMMAND_START in message.text and '@taxmon-manager-assistant'in message.text):
                     markup = telebot.types.InlineKeyboardMarkup()
                     markup.add(telebot.types.InlineKeyboardButton(
                             text=BUTTON_INTRODUCE,
@@ -71,12 +71,12 @@ class MessageProcessor:
                         disable_web_page_preview=True
                     )
 
-                elif message.text==BOT_COMMAND_HELP or message.text==BOT_COMMAND_HELP+'@taxmon_python_test_bot':
+                elif message.text==BOT_COMMAND_HELP or message.text==(BOT_COMMAND_HELP in message.text and '@taxmon-manager-assistant'in message.text):
                     help_text = HELP_MESSAGE
                     self.telegram_bot.reply_to(message, help_text)
                     return
 
-                elif message.text == BOT_COMMAND_FAIR or message.text==BOT_COMMAND_FAIR+'@taxmon_python_test_bot':
+                elif message.text == BOT_COMMAND_FAIR or (BOT_COMMAND_FAIR in message.text and '@taxmon-manager-assistant'in message.text):
                     random_user = self._get_random_user_by_position('Специалист по интеграции')
                     if random_user:
                         first_name=random_user[3]
@@ -96,14 +96,14 @@ class MessageProcessor:
                     else:
                         self.telegram_bot.send_message(message.chat.id, NO_SPECIALISTS_ERROR)
                 
-                elif message.text==BOT_COMMAND_INFO or message.text==BOT_COMMAND_INFO+'@taxmon_python_test_bot':
+                elif message.text==BOT_COMMAND_INFO or (BOT_COMMAND_INFO in message.text and '@taxmon-manager-assistant'in message.text):
                     info_text = INFO_MESSAGE
                     self.telegram_bot.reply_to(message, info_text, parse_mode='Markdown')
                     return
 
             # Обработчик текстовых сообщений
             elif message.reply_to_message is not None:
-                if message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text==EMAIL_PROMPT:
+                if message.reply_to_message.from_user.username == 'taxmon-manager-assistant' and message.reply_to_message.html_text==EMAIL_PROMPT:
                     def _is_valid_email(email: str) -> bool:
                         """Проверяет валидность email адреса"""
                         pattern = EMAIL_PATTERN
@@ -161,7 +161,7 @@ class MessageProcessor:
                             )
                         else:
                             self.telegram_bot.send_message(message.chat.id, EMAIL_SAVE_ERROR)
-                elif message.reply_to_message.from_user.username == 'taxmon_python_test_bot' and message.reply_to_message.html_text==TIMEZONE_PROMPT:
+                elif message.reply_to_message.from_user.username == 'taxmon-manager-assistant' and message.reply_to_message.html_text==TIMEZONE_PROMPT:
                     time_zone = message.text.strip()
                     
                     user_id = message.from_user.id
@@ -638,7 +638,7 @@ class MessageProcessor:
         
         # Создаем текст сообщения
         profile_url=STAFF_PROFILE_URL_TEMPLATE.format(username=username)
-        message=message_data['message']
+        message=message_data['message'].replace('@taxmon-manager-assistant', '').strip().replace('@taxmon-manager-assista', '').strip()
         message_text = MESSAGE_TEMPLATE.format(
             status=NO_RESPONSE_MESSAGE,
             position=position,
