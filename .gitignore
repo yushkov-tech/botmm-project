@@ -220,3 +220,6 @@ logs/
 =======
 .cache
 >>>>>>> f70413b1aa018b08967f1b5fd47a3920d90aa6a4
+secret.yaml
+*.env
+botmm-env.txt
