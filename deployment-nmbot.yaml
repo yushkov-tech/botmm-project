@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: botmm-bot
+  namespace: nmbot
+  labels:
+    app: botmm-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: botmm-bot
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: botmm-bot
+    spec:
+      containers:
+      - name: botmm-bot
+        image: docker.io/library/botmm-bot:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MANAGER_CHAT_ID
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: MANAGER_CHAT_ID
+        - name: MATTERMOST_BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: MATTERMOST_BEARER_TOKEN
+        - name: MATTERMOST_BOT_USER_ID
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: MATTERMOST_BOT_USER_ID
+        - name: MATTERMOST_CHANNEL_ID
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: MATTERMOST_CHANNEL_ID
+        - name: MATTERMOST_SERVER_URL
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: MATTERMOST_SERVER_URL
+        - name: MATTERMOST_TEAM_ID
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: MATTERMOST_TEAM_ID
+        - name: TELEGRAM_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: TELEGRAM_BOT_TOKEN
+        - name: TELEGRAM_CHAT_ID
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: TELEGRAM_CHAT_ID
+        - name: WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: botmm-secret
+              key: WEBHOOK_URL
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "100Mi"
+            ephemeral-storage: "600Mi"
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+            ephemeral-storage: "300Mi"apiVersion: apps/v1        

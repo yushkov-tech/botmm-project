@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: botmm-bot
+  namespace: default
+  labels:
+    app: botmm-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: botmm-bot
+  template:
+    metadata:
+      labels:
+        app: botmm-bot
+    spec:
+      containers:
+      - name: botmm-bot
+        image: docker.io/library/botmm-bot:latest
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - secretRef:
+            name: botmm-secret
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
