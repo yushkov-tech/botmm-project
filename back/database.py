@@ -15,10 +15,12 @@ class Database:
         self.conn = None
         self.lock = Lock()
         self._initialize_db()
+        LOGGER.info(f"Инициализация базы данных: {db_file}")
 
     def _initialize_db(self):
         """Инициализация базы данных и создание таблиц"""
         try:
+            LOGGER.info("Создание/проверка таблиц в базе данных")
             self.conn = sqlite3.connect(self.db_file, check_same_thread=False)
             cursor = self.conn.cursor()
             
@@ -73,6 +75,7 @@ class Database:
             """)
             
             self.conn.commit()
+            LOGGER.info("Таблицы в базе данных успешно созданы/проверены")
         except Error as e:
             error=str(e)
             LOGGER.error(DB_INIT_ERROR).format(error=error)
@@ -90,12 +93,15 @@ class Database:
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (message_hash, message_text, channel_id, post_id, user_id, timestamp))
                 self.conn.commit()
+                if cursor.rowcount > 0:
+                    LOGGER.debug(f"Сообщение добавлено в БД: {message_hash}")
+                else:
+                    LOGGER.debug(f"Сообщение уже существует в БД: {message_hash}")
                 return cursor.lastrowid
             except Error as e:
                 error=str(e)
                 LOGGER.error(DB_ADD_MESSAGE_ERROR).format(error=error)
                 return None
-
     def get_message_by_hash(self, message_hash: str):
         """Получает сообщение по хешу"""
         with self.lock:
@@ -171,6 +177,7 @@ class Database:
                         last_seen = CURRENT_TIMESTAMP
                 """, (user_id, username, first_name, last_name, position, email, id_tg, username_tg, time_zone))
                 self.conn.commit()
+                LOGGER.debug(f"Пользователь обновлен/добавлен в БД: {user_id}")
                 return True
             except Error as e:
                 error=str(e)
@@ -309,3 +316,4 @@ class Database:
         """Закрывает соединение с базой данных"""
         if self.conn:
             self.conn.close()
+            LOGGER.info("Соединение с базой данных закрыто")
