@@ -17,11 +17,16 @@ spec:
     spec:
       containers:
       - name: botmm-bot
-        image: docker.io/library/botmm-bot:latest
+        image: maksimyushkovtech/botmm-bot:latest
         imagePullPolicy: IfNotPresent
         envFrom:
         - secretRef:
             name: botmm-secret
+        env:
+        - name: LOG_LEVEL
+          value: "DEBUG"
+        - name: PYTHONUNBUFFERED
+          value: "1"
         resources:
           requests:
             memory: "128Mi"
