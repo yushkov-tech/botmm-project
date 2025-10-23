@@ -215,4 +215,8 @@ Thumbs.db
 logs/
 
 # Cache directories
+<<<<<<< HEAD
 .cache
+=======
+.cache
+>>>>>>> f70413b1aa018b08967f1b5fd47a3920d90aa6a4
