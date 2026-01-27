@@ -95,7 +95,7 @@ class MattermostPoller:
         self.last_statistics_time = current_time
     
     def _process_messages(self, messages: dict):
-        """Обрабатывает полученные сообщения"""
+        """Ообрабатывает полученные сообщения"""
         LOGGER.debug(f"Начало обработки {len(messages.get('order', []))} сообщений")
         processed_count = 0
         
@@ -103,13 +103,18 @@ class MattermostPoller:
             post = messages['posts'][post_id]
             
             # Игнорируем сообщения от бота
-            if post['user_id'] == self.config.bot_user_id or '@taxmon-manager-assista' not in post['message']:
-                LOGGER.debug(f"Сообщение {post_id} пропущено (от бота или без упоминания)")
+            if post['user_id'] == self.config.bot_user_id:
+                LOGGER.debug(f"Сообщение {post_id} пропущено (от бота)")
+                continue
+            
+            if '@taxmon-manager-assista' not in post['message']:
+                LOGGER.debug(f"Сообщение {post_id} пропущено (без упоминания бота)")
                 continue
             
             # Проверяем время создания сообщения
             create_at = post.get('create_at', 0) / 1000  # Приводим к миллисекундам
             message_time = datetime.fromtimestamp(create_at, timezone.utc)
+            
             # Игнорируем сообщения, отправленные до последнего времени обработки
             if message_time <= self.last_post_time:
                 LOGGER.debug(f"Сообщение {post_id} пропущено (устаревшее)")

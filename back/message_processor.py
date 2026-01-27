@@ -24,6 +24,9 @@ class MessageProcessor:
         self.processed_messages = set()
         self.pending_responses = {}
         self.lock = Lock()
+        # Добавляем таймер для очистки старых записей
+        self.last_cleanup_time = time.time()
+        self.max_processed_age = 7200  # 1 час
         
         LOGGER.info("Инициализация MessageProcessor")
         # Инициализация Telegram бота
@@ -434,6 +437,12 @@ class MessageProcessor:
         message_id = self.db.add_message(message_hash, message, channel_id, post_id, user_id, time.time())
         
         with self.lock:
+            # Периодическая очистка старых записей
+            current_time = time.time()
+            if current_time - self.last_cleanup_time > 300:  # Каждые 5 минут
+                self._cleanup_old_messages(current_time)
+                self.last_cleanup_time = current_time
+            
             if message_hash in self.processed_messages:
                 LOGGER.debug(f"Сообщение уже в обработке: {message_hash}")
                 return
@@ -450,8 +459,18 @@ class MessageProcessor:
             'post_id': post_id,
             'user_id': user_id,
             'message_hash': message_hash,
-            'timestamp': time.time()
+            'timestamp': time.time(),
+            'added_to_queue_time': current_time  # Время добавления в очередь
         })
+    
+    def _cleanup_old_messages(self, current_time: float):
+        """Очищает старые записи из processed_messages"""
+        # Эта структура сейчас хранит только хеши, нужно изменить на хранение времени
+        # Для простоты можно просто очищать весь набор если он слишком большой
+        if len(self.processed_messages) > 1000:
+            LOGGER.info(f"Очистка processed_messages: было {len(self.processed_messages)} записей")
+            self.processed_messages.clear()
+            LOGGER.info(f"Очистка завершена")
     
     def _get_random_user_by_position(self, position: str):
         LOGGER.debug(f"Поиск случайного пользователя с позицией: {position}")
