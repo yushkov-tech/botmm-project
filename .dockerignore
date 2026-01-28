@@ -1,119 +1,68 @@
-# ==============================================================================
+# Git
+.git/
+.gitignore
+
 # Python
-# ==============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-*.pyd
-
-# Distribution / packaging
+.Python
 build/
+develop-eggs/
 dist/
+downloads/
 eggs/
 .eggs/
+lib/
+lib64/
 parts/
+sdist/
 var/
 wheels/
 *.egg-info/
+.installed.cfg
 *.egg
 
-# Environments
-.env
-.venv
-env/
+# Virtual Environment
 venv/
-ENV/
-env.bak/
-venv.bak/
+env/
 
-# Testing
-.pytest_cache/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-htmlcov/
-
-# ==============================================================================
-# IDE & Editor
-# ==============================================================================
-.idea/
+# IDE
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
 
-# ==============================================================================
-# OS Generated
-# ==============================================================================
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Trashes
 Thumbs.db
-Desktop.ini
 
-# ==============================================================================
-# Version Control
-# ==============================================================================
-.git/
-.gitignore
-.github/
-
-# ==============================================================================
-# Project Specific - ИСКЛЮЧАЕМ из Docker
-# ==============================================================================
-# Database files
+# Project specific
 *.db
-*.sqlite3
-messages.db
+*.log
+.env
+.env.local
+secrets/
+config/local/
+data/
 
-# Logs (в Docker логи лучше писать в stdout)
+# Test files
+tests/
+test_*.py
+*test*.py
+
+# Documentation
+docs/
+README.md
+CHANGELOG.md
+LICENSE
+
+# Logs
 *.log
 logs/
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
-
-# Development configs
-config/dev.yaml
-config/local.yaml
-
-# ==============================================================================
-# Package Manager - ИСКЛЮЧАЕМ исходники, оставляем только requirements
-# ==============================================================================
-Pipfile
-Pipfile.lock
-poetry.lock
-__pypackages__/
-
-# ==============================================================================
-# Archives
-# ==============================================================================
-*.tar
-*.tar.gz
-*.zip
-*.7z
-botmm-bot.tar
-
-# ==============================================================================
-# Docker & Kubernetes Development files
-# ==============================================================================
-Dockerfile
-.dockerignore
-docker-compose.yml
-docker-compose.*.yml
-k8s/
-kubernetes/
-manifests/
-
-# ==============================================================================
-# Documentation
-# ==============================================================================
-docs/
-*.md
-!DOCKER_README.md  # Специальный README для Docker
+# Temp files
+tmp/
+temp/

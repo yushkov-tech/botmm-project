@@ -1,6 +1,6 @@
-# main_template.py
 import time
 from threading import Thread, Event
+import os
 
 from massage_varibles import *
 from varibles import *
@@ -14,6 +14,7 @@ from back.config import *
 def main():
     """Основная функция запуска"""
     stop_event = Event()
+    db = None
     
     try:
         config = Config()
@@ -42,7 +43,7 @@ def main():
         LOGGER.error(FATAL_ERROR.format(error=error))
         stop_event.set()
     finally:
-        if 'db' in locals():
+        if db is not None:
             db.close()
 
 if __name__ == '__main__':

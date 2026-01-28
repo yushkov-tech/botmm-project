@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: botmm-config
+  namespace: your-namespace  # ЗАМЕНИТЕ на ваш namespace
+data:
+  # Флаги функциональности для botmm (полная версия)
+  ENABLE_MENTIONS: "true"
+  ENABLE_WORKING_HOURS_CHECK: "true"
+  ENABLE_RESPONSES: "true"
+  ENABLE_REMINDERS: "true"
+  ENABLE_MANAGER_NOTIFICATIONS: "true"
+  ENABLE_USER_REGISTRATION: "true"
+  REQUIRE_MENTION: "true"
+  ENABLE_COMMANDS: "true"
+  
+  # Таймауты
+  POLLING_INTERVAL: "30"
+  MATTERMOSTTIMEOUT: "20"
+  MASSAGETIMEOUT: "10"
+  USERTIMEOUT: "15"
+  ERROR_RETRY_INTERVAL: "15"
+  
+  # Логирование
+  LOG_LEVEL: "INFO"
+  
+  # Идентификатор бота
+  BOT_NAME: "botmm"
