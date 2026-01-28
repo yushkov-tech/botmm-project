@@ -1,3 +1,4 @@
+# main_template.py
 import time
 from threading import Thread, Event
 
@@ -17,13 +18,13 @@ def main():
     try:
         config = Config()
         db = Database()
-        processor = MessageProcessor(config, db)
+        processor = MessageProcessorTemplate(config, db)
         
         # Запускаем обработчик сообщений
         Thread(target=processor.start_processing, args=(stop_event,), daemon=True).start()
         
         # Запускаем поллинг Mattermost
-        poller = MattermostPoller(config, processor)
+        poller = MattermostPollerTemplate(config, processor)
         Thread(target=poller.poll, args=(stop_event,), daemon=True).start()
         
         # Запускаем Telegram бота
@@ -37,8 +38,8 @@ def main():
         LOGGER.error(SHUTDOWN_MESSAGE)
         stop_event.set()
     except Exception as e:
-        error=str(e)
-        LOGGER.error(FATAL_ERROR).format(error=error)
+        error = str(e)
+        LOGGER.error(FATAL_ERROR.format(error=error))
         stop_event.set()
     finally:
         if 'db' in locals():
