@@ -24,7 +24,7 @@ COPY . .
 
 # Убедимся, что python будет использовать локальные пакеты
 ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONPATH=/root/.local/lib/python3.11/site-packages:$PYTHONPATH
+ENV PYTHONPATH=/root/.local/lib/python3.11/site-packages:${PYTHONPATH:-}
 
 # Здоровье-чек для Kubernetes
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
