@@ -42,9 +42,9 @@ class Config:
         
         # Таймауты
         self.polling_interval = int(os.getenv("POLLING_INTERVAL", "30"))
-        self.mattermost_timeout = int(os.getenv("MATTERMOSTTIMEOUT", "20"))
-        self.message_timeout = int(os.getenv("MASSAGETIMEOUT", "10"))
-        self.user_timeout = int(os.getenv("USERTIMEOUT", "15"))
+        self.mattermosttimeout = int(os.getenv("MATTERMOSTTIMEOUT", "20"))
+        self.massagetimeout = int(os.getenv("MASSAGETIMEOUT", "10"))
+        self.usertimeout = int(os.getenv("USERTIMEOUT", "15"))
         self.error_retry_interval = int(os.getenv("ERROR_RETRY_INTERVAL", "15"))
         
         # Валидация

@@ -572,7 +572,7 @@ class MessageProcessorTemplate:
         
         return {'username': user_id}
     
-    def _send_to_mattermost(self, channel_id: str, message: str, post_id: str = None):
+    def _send_to_mattermost(self, channel_id: str, message: str, post_id: str = ""):
         """Отправляет сообщение в Mattermost"""
         LOGGER.debug(f"Отправка сообщения в Mattermost, channel: {channel_id}")
         headers = {
@@ -592,7 +592,7 @@ class MessageProcessorTemplate:
                 f"{self.config.mattermost_server_url}/api/v4/posts",
                 headers=headers,
                 json=payload,
-                timeout=self.usertimeout
+                timeout=self.config.usertimeout
             )
             if response.status_code == HTTP_CREATED:
                 LOGGER.info(f"Сообщение успешно отправлено в Mattermost")
