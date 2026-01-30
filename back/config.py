@@ -41,11 +41,11 @@ class Config:
         self.enable_commands = self._get_bool("ENABLE_COMMANDS", True)
         
         # Таймауты
-        self.POLLING_INTERVAL = int(os.getenv("POLLING_INTERVAL", "30"))
-        self.MATTERMOSTTIMEOUT = int(os.getenv("MATTERMOSTTIMEOUT", "20"))
-        self.MASSAGETIMEOUT = int(os.getenv("MASSAGETIMEOUT", "10"))
-        self.USERTIMEOUT = int(os.getenv("USERTIMEOUT", "15"))
-        self.ERROR_RETRY_INTERVAL = int(os.getenv("ERROR_RETRY_INTERVAL", "15"))
+        self.polling_interval = int(os.getenv("POLLING_INTERVAL", "30"))
+        self.mattermost_timeout = int(os.getenv("MATTERMOSTTIMEOUT", "20"))
+        self.message_timeout = int(os.getenv("MASSAGETIMEOUT", "10"))
+        self.user_timeout = int(os.getenv("USERTIMEOUT", "15"))
+        self.error_retry_interval = int(os.getenv("ERROR_RETRY_INTERVAL", "15"))
         
         # Валидация
         self._validate_config()

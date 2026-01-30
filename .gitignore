@@ -57,3 +57,4 @@ test.db
 # Kubernetes
 !k8s/*.yaml
 *.tmp.yaml
+*.yaml
