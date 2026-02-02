@@ -38,6 +38,7 @@ class Config:
         self.enable_manager_notifications = self._get_bool("ENABLE_MANAGER_NOTIFICATIONS", True)
         self.enable_user_registration = self._get_bool("ENABLE_USER_REGISTRATION", True)
         self.require_mention = self._get_bool("REQUIRE_MENTION", True)
+        self.all_root = self._get_bool("ALL_ROOT", True)
         self.enable_commands = self._get_bool("ENABLE_COMMANDS", True)
         
         # Таймауты

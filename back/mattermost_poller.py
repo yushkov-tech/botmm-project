@@ -23,6 +23,7 @@ class MattermostPollerTemplate:
         self.failed_polls = 0
         self.last_statistics_time = time.time()
         
+        
     
     def poll(self, stop_event: Event):
         """Основной цикл поллинга"""
@@ -77,12 +78,16 @@ class MattermostPollerTemplate:
                 continue
             
             # Проверяем упоминание (если требуется)
-            if self.config.require_mention and '@taxmon-manager-assistant' not in post['message']:
+            if self.config.require_mention and f'@{self.config.bot_name}' not in post['message']:
+                LOGGER.debug(f"Сообщение {post_id} пропущено (без упоминания бота)")
+                continue
+
+            if bool(self.config.all_root) and post['root_id']:
                 LOGGER.debug(f"Сообщение {post_id} пропущено (без упоминания бота)")
                 continue
             
             # Проверяем время создания сообщения
-            create_at = post.get('create_at', 0) / 1000
+            create_at = post.get('craeate_at', 0) / 1000
             message_time = datetime.fromtimestamp(create_at, timezone.utc)
             
             if message_time <= self.last_post_time:
