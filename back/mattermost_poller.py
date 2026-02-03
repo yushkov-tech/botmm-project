@@ -87,7 +87,7 @@ class MattermostPollerTemplate:
                 continue
             
             # Проверяем время создания сообщения
-            create_at = post.get('craeate_at', 0) / 1000
+            create_at = post.get('create_at', 0) / 1000
             message_time = datetime.fromtimestamp(create_at, timezone.utc)
             
             if message_time <= self.last_post_time:
