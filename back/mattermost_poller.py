@@ -71,6 +71,10 @@ class MattermostPollerTemplate:
         
         for post_id in messages.get('order', []):
             post = messages['posts'][post_id]
+
+            if post.get('props'):
+                LOGGER.debug(f"Сообщение {post_id} пропущено системное")
+                continue
             
             # Игнорируем сообщения от бота
             if post['user_id'] == self.config.bot_user_id:
@@ -82,8 +86,8 @@ class MattermostPollerTemplate:
                 LOGGER.debug(f"Сообщение {post_id} пропущено (без упоминания бота)")
                 continue
 
-            if bool(self.config.all_root) and post['root_id']:
-                LOGGER.debug(f"Сообщение {post_id} пропущено (без упоминания бота)")
+            if not self.config.all_root and post['root_id']:
+                LOGGER.debug(f"Сообщение {post_id} пропущено, это переписка")
                 continue
             
             # Проверяем время создания сообщения
