@@ -10,6 +10,35 @@ from back.logger import *
 from back.mattermost_poller import *
 from back.message_processor import *
 from back.config import *
+from requests.exceptions import ReadTimeout, ConnectionError
+
+def run_telegram_bot(processor):
+    """Функция для запуска бота в потоке"""
+    retry_count = 0
+    
+    while True:
+        try:
+            LOGGER.info(f"Запуск Telegram бота (попытка {retry_count + 1})...")
+            retry_count = 0  # Сбрасываем счетчик при успешном запуске
+            processor.telegram_bot.infinity_polling(
+                timeout=60,
+                long_polling_timeout=60,
+                restart_on_change=True
+            )
+        except (ReadTimeout, ConnectionError) as e:
+            retry_count += 1
+            LOGGER.warning(f"Сетевая ошибка Telegram бота ({retry_count}): {e}")
+            wait_time = 10  # Короткая пауза для сетевых ошибок
+            LOGGER.info(f"Перезапуск через {wait_time} секунд...")
+            time.sleep(wait_time)
+        except KeyboardInterrupt:
+            LOGGER.info("Telegram бот остановлен пользователем")
+            break
+        except Exception as e:
+            LOGGER.error(f"Критическая ошибка в Telegram боте: {e}")
+            LOGGER.info("Перезапуск через 1 минуту...")
+            time.sleep(60)
+
 
 def main():
     """Основная функция запуска"""
@@ -29,7 +58,7 @@ def main():
         Thread(target=poller.poll, args=(stop_event,), daemon=True).start()
         
         # Запускаем Telegram бота
-        Thread(target=processor.telegram_bot.infinity_polling, daemon=True).start()
+        Thread(target=run_telegram_bot, args=(processor,), daemon=True).start()
         
         # Основной цикл
         while not stop_event.is_set():
