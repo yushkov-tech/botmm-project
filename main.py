@@ -23,7 +23,7 @@ def run_telegram_bot(processor):
             processor.telegram_bot.infinity_polling(
                 timeout=60,
                 long_polling_timeout=60,
-                restart_on_change=False  # Убрали или установили в False
+                # restart_on_change=False  # Убрали или установили в False
             )
         except (ReadTimeout, ConnectionError) as e:
             retry_count += 1
