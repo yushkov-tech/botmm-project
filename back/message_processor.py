@@ -634,7 +634,7 @@ class MessageProcessorTemplate:
         # Форматируем сообщение
         profile_url = STAFF_PROFILE_URL_TEMPLATE.format(username=username)
         message_text = message_data['message'].replace(f"@{self.config.bot_mm_name}", '').strip()
-        message_text = message_text.replace('@taxmon-manager-assista', '').strip()
+        message_text = message_text.replace(f"@{self.config.bot_mm_name[0:24]}", '').strip()
         
         # Создаем текст сообщения в зависимости от настроек
         if self.config.enable_mentions:
