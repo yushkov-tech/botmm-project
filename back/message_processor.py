@@ -98,7 +98,7 @@ class MessageProcessorTemplate:
     
     def _handle_commands(self, message):
         """Обработка команд бота"""
-        if message.text == BOT_COMMAND_START or (BOT_COMMAND_START in message.text and '@taxmon-manager-assistant' in message.text):
+        if message.text == BOT_COMMAND_START or (BOT_COMMAND_START in message.text and f"@{self.config.bot_mm_name}" in message.text):
             LOGGER.info(f"Обработка команды /start от пользователя {message.from_user.id}")
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(telebot.types.InlineKeyboardButton(
@@ -114,13 +114,13 @@ class MessageProcessorTemplate:
                 disable_web_page_preview=True
             )
 
-        elif message.text == BOT_COMMAND_HELP or (BOT_COMMAND_HELP in message.text and '@taxmon-manager-assistant' in message.text):
+        elif message.text == BOT_COMMAND_HELP or (BOT_COMMAND_HELP in message.text and f"@{self.config.bot_mm_name}" in message.text):
             LOGGER.info(f"Обработка команды /help от пользователя {message.from_user.id}")
             help_text = HELP_MESSAGE
             self.telegram_bot.reply_to(message, help_text)
             return
 
-        elif message.text == BOT_COMMAND_FAIR or (BOT_COMMAND_FAIR in message.text and '@taxmon-manager-assistant' in message.text):
+        elif message.text == BOT_COMMAND_FAIR or (BOT_COMMAND_FAIR in message.text and f"@{self.config.bot_mm_name}" in message.text):
             LOGGER.info(f"Обработка команды /fair от пользователя {message.from_user.id}")
             random_user = self._get_random_user_by_position('Специалист по интеграции')
             if random_user:
@@ -143,7 +143,7 @@ class MessageProcessorTemplate:
                 self.telegram_bot.send_message(message.chat.id, NO_SPECIALISTS_ERROR)
                 LOGGER.warning("Не найдены специалисты по интеграции для команды /fair")
         
-        elif message.text == BOT_COMMAND_INFO or (BOT_COMMAND_INFO in message.text and '@taxmon-manager-assistant' in message.text):
+        elif message.text == BOT_COMMAND_INFO or (BOT_COMMAND_INFO in message.text and f"@{self.config.bot_mm_name}" in message.text):
             LOGGER.info(f"Обработка команды /info от пользователя {message.from_user.id}")
             info_text = INFO_MESSAGE
             self.telegram_bot.reply_to(message, info_text, parse_mode='Markdown')
@@ -152,7 +152,7 @@ class MessageProcessorTemplate:
     def _handle_user_registration(self, message):
         """Обработка регистрации пользователя"""
         if message.reply_to_message is not None:
-            if message.reply_to_message.from_user.username == 'taxmon-manager-assistant' and message.reply_to_message.html_text == EMAIL_PROMPT:
+            if message.reply_to_message.from_user.username == self.config.bot_mm_name and message.reply_to_message.html_text == EMAIL_PROMPT:
                 LOGGER.info(f"Обработка email от пользователя {message.from_user.id}")
                 email = message.text.strip()
                 
@@ -212,7 +212,7 @@ class MessageProcessorTemplate:
                         self.telegram_bot.send_message(message.chat.id, EMAIL_SAVE_ERROR)
                         LOGGER.error(f"Ошибка сохранения email: {email}")
             
-            elif message.reply_to_message.from_user.username == 'taxmon-manager-assistant' and message.reply_to_message.html_text == TIMEZONE_PROMPT:
+            elif message.reply_to_message.from_user.username == self.config.bot_mm_name and message.reply_to_message.html_text == TIMEZONE_PROMPT:
                 LOGGER.info(f"Обработка часового пояса от пользователя {message.from_user.id}")
                 time_zone = message.text.strip()
                 
@@ -633,7 +633,7 @@ class MessageProcessorTemplate:
         
         # Форматируем сообщение
         profile_url = STAFF_PROFILE_URL_TEMPLATE.format(username=username)
-        message_text = message_data['message'].replace('@taxmon-manager-assistant', '').strip()
+        message_text = message_data['message'].replace(f"@{self.config.bot_mm_name}", '').strip()
         message_text = message_text.replace('@taxmon-manager-assista', '').strip()
         
         # Создаем текст сообщения в зависимости от настроек
@@ -767,8 +767,8 @@ class MessageProcessorTemplate:
         
         mm_link = self._format_mattermost_link(message_data['post_id'])
         profile_url = STAFF_PROFILE_URL_TEMPLATE.format(username=username)
-        message_text = message_data['message'].replace('@taxmon-manager-assistant', '').strip()
-        message_text = message_text.replace('@taxmon-manager-assista', '').strip()
+        message_text = message_data['message'].replace(f'@{self.config.bot_mm_name}', '').strip()
+        message_text = message_text.replace(f'@{self.config.bot_mm_name}', '').strip()
         
         formatted_message = MESSAGE_TEMPLATE.format(
             status=NO_RESPONSE_MESSAGE,
