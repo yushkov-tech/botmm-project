@@ -30,8 +30,8 @@ ENV PYTHONPATH=/root/.local/lib/python3.11/site-packages:${PYTHONPATH:-}
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import requests; import os; \
     try: \
-        bot_name = os.getenv('BOT_NAME', 'unknown'); \
-        print(f'Health check for {bot_name}'); \
+        bot_name = os.getenv('bot_mm_name', 'unknown'); \
+        print(f'Health check for {bot_mm_name}'); \
     except: \
         exit(1)"
 

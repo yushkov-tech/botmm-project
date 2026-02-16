@@ -14,30 +14,30 @@ WORK_TIME = {'start': 9, 'end': 16}
 
 
 # Ошибки базы данных
-DB_INIT_ERROR = "Database initialization error: {error}"
-DB_ADD_MESSAGE_ERROR = "Error adding message: {error}"
-DB_GET_MESSAGE_ERROR = "Error getting message: {error}"
-DB_UPDATE_RESPONSE_ERROR = "Error updating message response: {error}"
-DB_USER_UPDATE_ERROR = "Error adding/updating user: {error}"
-DB_GET_USER_ERROR = "Error getting user info: {error}"
-DB_GET_USERS_TZ_ERROR = "Error fetching users with time zone: {error}"
-DB_RANDOM_USER_ERROR = "Error getting random user by position: {error}"
-DB_CREATE_TASK_ERROR = "Error creating task: {error}"
-DB_UPDATE_TASK_ERROR = "Error updating task status: {error}"
-DB_GET_USER_EMAIL_ERROR = "Error getting user by email: {error}"
+DB_INIT_ERROR = "Ошибка инициализации базы данных: {error}"
+DB_ADD_MESSAGE_ERROR = "Ошибка добавления сообщения: {error}"
+DB_GET_MESSAGE_ERROR = "Ошибка получения сообщения: {error}"
+DB_UPDATE_RESPONSE_ERROR = "Ошибка обновления ответа на сообщение: {error}"
+DB_USER_UPDATE_ERROR = "Ошибка добавления/обновления пользователя: {error}"
+DB_GET_USER_ERROR = "Ошибка получения информации о пользователе: {error}"
+DB_GET_USERS_TZ_ERROR = "Ошибка получения пользователей с часовыми поясами: {error}"
+DB_RANDOM_USER_ERROR = "Ошибка получения случайного пользователя по должности: {error}"
+DB_CREATE_TASK_ERROR = "Ошибка создания задачи: {error}"
+DB_UPDATE_TASK_ERROR = "Ошибка обновления статуса задачи: {error}"
+DB_GET_USER_EMAIL_ERROR = "Ошибка получения пользователя по email: {error}"
 
 # Ошибки Mattermost
-MM_POLL_ERROR = "Mattermost poll error: {error}"
-MM_POLL_EXCEPTION = "Mattermost poll exception: {error}"
-MM_SEND_ERROR = "Mattermost send error: {error}"
+MM_POLL_ERROR = "Ошибка поллинга Mattermost: {error}"
+MM_POLL_EXCEPTION = "Исключение при поллинге Mattermost: {error}"
+MM_SEND_ERROR = "Ошибка отправки в Mattermost: {error}"
 MM_USER_INFO_ERROR = "Ошибка получения информации о пользователе: {error}"
 
 # Ошибки Telegram
 TG_SEND_ERROR = "Ошибка отправки в Telegram: {error}"
 
 # Общие ошибки
-WEBHOOK_SERVER_ERROR = "Webhook server error: {error}"
-FATAL_ERROR = "Fatal error: {error}"
-SHUTDOWN_MESSAGE = "Shutting down..."
+WEBHOOK_SERVER_ERROR = "Ошибка вебхук сервера: {error}"
+FATAL_ERROR = "Критическая ошибка: {error}"
+SHUTDOWN_MESSAGE = "Завершение работы..."
 
-POSITION='Менеджер проектов по внедрению'
+POSITION = 'Менеджер проектов по внедрению'

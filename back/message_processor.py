@@ -41,7 +41,7 @@ class MessageProcessorTemplate:
         
         @bot.message_handler(func=lambda message: True)
         def handle_message(message):
-            LOGGER.debug(f"Получено сообщение в Telegram: {message.text[:50]}... от пользователя {message.from_user.id}")
+            LOGGER.info(f"Получено сообщение в Telegram: {message.text[:50]}... от пользователя {message.from_user.id}")
             
             # Обработка ответов на сообщения (если включено)
             if self.config.enable_responses and message.reply_to_message and message.reply_to_message.message_id in self.pending_responses:
@@ -353,7 +353,7 @@ class MessageProcessorTemplate:
     
     def _update_message_with_new_button(self, message, message_data: dict, button_text: str):
         """Обновляет сообщение с новой кнопкой"""
-        LOGGER.debug(f"Обновление кнопки в сообщении {message.message_id}")
+        LOGGER.info(f"Обновление кнопки в сообщении {message.message_id}")
         mm_link = self._format_mattermost_link(message_data['post_id'])
         user_info = self._get_user_info(message_data['user_id'])
         username = user_info.get('username', '') if user_info else ''
@@ -385,7 +385,7 @@ class MessageProcessorTemplate:
         if not self.config.enable_reminders:
             return
             
-        LOGGER.debug(f"Отправка напоминания #{reminder_number} для задачи {message_data['message_hash']}")
+        LOGGER.info(f"Отправка напоминания #{reminder_number} для задачи {message_data['message_hash']}")
         first_message_id = self._find_first_message_id(message_data['message_hash'])
         
         if not first_message_id:
@@ -427,7 +427,7 @@ class MessageProcessorTemplate:
         
         # Проверяем, является ли сегодня выходным днем
         if now_ekb.weekday() >= 5:
-            LOGGER.debug("Текущее время - выходной день")
+            LOGGER.info("Текущее время - выходной день")
             return False
         
         # Проверяем рабочие часы
@@ -437,7 +437,7 @@ class MessageProcessorTemplate:
         is_working = (WORK_TIME['start'] <= ekb_hour < WORK_TIME['end'] and 
                 WORK_TIME['start'] <= msk_hour < WORK_TIME['end'])
         
-        LOGGER.debug(f"Проверка рабочего времени: ЕКБ {ekb_hour}ч, МСК {msk_hour}ч - {'рабочее' if is_working else 'нерабочее'}")
+        LOGGER.info(f"Проверка рабочего времени: ЕКБ {ekb_hour}ч, МСК {msk_hour}ч - {'рабочее' if is_working else 'нерабочее'}")
         return is_working
     
     def process_message(self, message: str, channel_id: str, post_id: str, user_id: str):
@@ -446,7 +446,7 @@ class MessageProcessorTemplate:
         
         # Пропускаем сообщения от бота
         if user_id == self.config.bot_user_id:
-            LOGGER.debug("Сообщение от бота, пропуск")
+            LOGGER.info("Сообщение от бота, пропуск")
             return
         
         message_hash = self._get_message_hash(message, channel_id, post_id)
@@ -454,7 +454,7 @@ class MessageProcessorTemplate:
         # Проверяем, было ли сообщение уже обработано
         db_message = self.db.get_message_by_hash(message_hash)
         if db_message and db_message[7]:  # is_processed
-            LOGGER.debug(f"Сообщение уже обработано: {message_hash}")
+            LOGGER.info(f"Сообщение уже обработано: {message_hash}")
             return
         
         # Добавляем сообщение в базу данных
@@ -468,7 +468,7 @@ class MessageProcessorTemplate:
                 self.last_cleanup_time = current_time
             
             if message_hash in self.processed_messages:
-                LOGGER.debug(f"Сообщение уже в обработке: {message_hash}")
+                LOGGER.info(f"Сообщение уже в обработке: {message_hash}")
                 return
             self.processed_messages[message_hash] = current_time
         
@@ -509,12 +509,12 @@ class MessageProcessorTemplate:
             LOGGER.info(f"Очищено {len(to_remove)} старых записей из processed_messages")
     
     def _get_random_user_by_position(self, position: str):
-        LOGGER.debug(f"Поиск случайного пользователя с позицией: {position}")
+        LOGGER.info(f"Поиск случайного пользователя с позицией: {position}")
         return self.db.get_random_user_by_position(position)
     
     def _get_user_info(self, user_id: str) -> dict:
         """Получает информацию о пользователе из Mattermost и сохраняет в БД"""
-        LOGGER.debug(f"Получение информации о пользователе: {user_id}")
+        LOGGER.info(f"Получение информации о пользователе: {user_id}")
         db_user = self.db.get_user_info(user_id)
         if db_user:
             LOGGER.debug(f"Пользователь найден в локальной БД: {user_id}")
@@ -574,7 +574,7 @@ class MessageProcessorTemplate:
     
     def _send_to_mattermost(self, channel_id: str, message: str, post_id: str = ""):
         """Отправляет сообщение в Mattermost"""
-        LOGGER.debug(f"Отправка сообщения в Mattermost, channel: {channel_id}")
+        LOGGER.info(f"Отправка сообщения в Mattermost, channel: {channel_id}")
         headers = {
             'Authorization': f'Bearer {self.config.mattermost_bearer_token}',
             'Content-Type': 'application/json'
@@ -618,7 +618,7 @@ class MessageProcessorTemplate:
         
         # Пропускаем ответы от внедренцев
         if message_data['message'].startswith('Ответ от внедренца'):
-            LOGGER.debug("Сообщение является ответом от внедренца, пропуск")
+            LOGGER.info("Сообщение является ответом от внедренца, пропуск")
             return
 
         # Получаем информацию об отправителе
@@ -739,7 +739,7 @@ class MessageProcessorTemplate:
         
         with self.lock:
             if message_data['post_id'] not in [msg['post_id'] for msg in self.pending_responses.values()]:
-                LOGGER.debug(f"Задача больше не в ожидании ответа: {message_data['message_hash']}")
+                LOGGER.info(f"Задача больше не в ожидании ответа: {message_data['message_hash']}")
                 return
         
         # Проверяем в базе данных, был ли ответ

@@ -94,7 +94,7 @@ class Database:
                 """, (message_hash, message_text, channel_id, post_id, user_id, timestamp))
                 self.conn.commit()
                 if cursor.rowcount > 0:
-                    LOGGER.debug(f"Сообщение добавлено в БД: {message_hash}")
+                    LOGGER.info(f"Сообщение добавлено в БД: {message_hash}")
                 else:
                     LOGGER.debug(f"Сообщение уже существует в БД: {message_hash}")
                 return cursor.lastrowid
@@ -177,7 +177,7 @@ class Database:
                         last_seen = CURRENT_TIMESTAMP
                 """, (user_id, username, first_name, last_name, position, email, id_tg, username_tg, time_zone))
                 self.conn.commit()
-                LOGGER.debug(f"Пользователь обновлен/добавлен в БД: {user_id}")
+                LOGGER.info(f"Пользователь обновлен/добавлен в БД: {user_id}")
                 return True
             except Error as e:
                 error=str(e)

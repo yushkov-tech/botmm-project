@@ -66,28 +66,28 @@ class MattermostPollerTemplate:
     
     def _process_messages(self, messages: dict):
         """Обрабатывает полученные сообщения"""
-        LOGGER.debug(f"Начало обработки {len(messages.get('order', []))} сообщений")
+        LOGGER.info(f"Начало обработки {len(messages.get('order', []))} сообщений")
         processed_count = 0
         
         for post_id in messages.get('order', []):
             post = messages['posts'][post_id]
 
             if post.get('props'):
-                LOGGER.debug(f"Сообщение {post_id} пропущено системное")
+                LOGGER.info(f"Сообщение {post_id} пропущено системное")
                 continue
             
             # Игнорируем сообщения от бота
             if post['user_id'] == self.config.bot_user_id:
-                LOGGER.debug(f"Сообщение {post_id} пропущено (от бота)")
+                LOGGER.info(f"Сообщение {post_id} пропущено (от бота)")
                 continue
             
             # Проверяем упоминание (если требуется)
             if self.config.require_mention and f'@{self.config.bot_name}' not in post['message']:
-                LOGGER.debug(f"Сообщение {post_id} пропущено (без упоминания бота)")
+                LOGGER.info(f"Сообщение {post_id} пропущено (без упоминания бота)")
                 continue
 
             if not self.config.all_root and post['root_id']:
-                LOGGER.debug(f"Сообщение {post_id} пропущено, это переписка")
+                LOGGER.info(f"Сообщение {post_id} пропущено, это переписка")
                 continue
             
             # Проверяем время создания сообщения
@@ -95,7 +95,7 @@ class MattermostPollerTemplate:
             message_time = datetime.fromtimestamp(create_at, timezone.utc)
             
             if message_time <= self.last_post_time:
-                LOGGER.debug(f"Сообщение {post_id} пропущено (устаревшее)")
+                LOGGER.info(f"Сообщение {post_id} пропущено (устаревшее)")
                 continue
             
             # Обрабатываем сообщение

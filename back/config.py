@@ -5,8 +5,6 @@ class Config:
     """Класс для хранения конфигурации"""
     def __init__(self):
         # Имя бота для идентификации
-        self.bot_name = os.getenv("BOT_NAME", "unknown")
-        print(f"🚀 Initializing bot: {self.bot_name}")
         
         # Загружаем переменные окружения
         self._load_config()
@@ -14,6 +12,8 @@ class Config:
         # Временные зоны
         self.ekb_tz = pytz.timezone('Asia/Yekaterinburg')
         self.msk_tz = pytz.timezone('Europe/Moscow')
+        self.bot_name = os.getenv("BOT_NAME", "unknown")[:22]
+        print(f"🚀 Initializing bot: {self.bot_name}")
         
         print(f"✅ Configuration loaded for {self.bot_name}")
     
@@ -24,7 +24,7 @@ class Config:
         self.channel_id = os.getenv("MATTERMOST_CHANNEL_ID", "")
         self.mattermost_bearer_token = os.getenv("MATTERMOST_BEARER_TOKEN", "")
         self.bot_user_id = os.getenv("MATTERMOST_BOT_USER_ID", "")
-        self.bot_mm_name = os.getenv("BOT_MM_NAME", "")
+        self.bot_mm_name = os.getenv("BOT_MM_NAME", "")[:22]
         
         # Telegram
         self.telegram_bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
